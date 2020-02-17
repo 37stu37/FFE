@@ -50,6 +50,7 @@ def Wind_scenario(wind_data=wind_df):
 
 def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_map):
     # states hold the state of each cell
+    for time in range(0, 1000):
     time = 0
     states = np.zeros((time, *fuel_map))
     states[0] = states(time, *ignition_map)
