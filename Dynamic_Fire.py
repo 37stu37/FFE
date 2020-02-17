@@ -49,9 +49,27 @@ def Wind_scenario(wind_data=wind_df):
     return wind_direction, critical_distance
 
 def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_map):
-    t = 0
-    states = ignition_map[t, ignition_map]
-    for p in range(critical_distance):
-        if wind_direction == 'N':
-            if states [ignition_map, t] == 2:
+    # states hold the state of each cell
+    time = 0
+    states = np.zeros(time, *ignition_map)
+    states[0] = states(time, *ignition_map)
 
+    # Make a copy of the original states
+    states[time] = states[time - 1].copy()
+
+    for x in range(1, terrain_size[0] - 1):
+        for y in range(1, terrain_size[1] - 1):
+
+            if states[t - 1, x, y] == 2:  # It's on fire
+                states[t, x, y] = 0  # Put it out and clear it
+
+                # If there's fuel surrounding it
+                # set it on fire!
+                if states[t - 1, x + 1, y] == 1:
+                    states[t, x + 1, y] = 2
+                if states[t - 1, x - 1, y] == 1:
+                    states[t, x - 1, y] = 2
+                if states[t - 1, x, y + 1] == 1:
+                    states[t, x, y + 1] = 2
+                if states[t - 1, x, y - 1] == 1:
+                    states[t, x, y - 1] = 2
