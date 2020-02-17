@@ -49,4 +49,9 @@ def Wind_scenario(wind_data=wind_df):
     return wind_direction, critical_distance
 
 def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_map):
+    t = 0
+    states = ignition_map[t, ignition_map]
+    for p in range(critical_distance):
+        if wind_direction == 'N':
+            if states [ignition_map, t] == 2:
 
