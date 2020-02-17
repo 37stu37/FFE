@@ -77,28 +77,28 @@ def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_proba
                         states[time, x, y - 1] = 2
                     if states[time - 1, x - 1, y - 1] == 1:
                         states[time, x - 1, y - 1] = 2
-                    if states[time - 1, x - 1 , y - 1] == 1:
+                    if states[time - 1, x - 1, y - 1] == 1:
                         states[time, x - 1, y - 1] = 2
                     if states[time - 1, x - 1 , y] == 1:
                         states[time, x - 1, y] = 2
 
                 if states[time - 1, x, y] == 2 and wind_direction == 'N':  # It's on fire
                     # set it on fire!
+                    if states[time - 1, x - 1, y + 1] == 1:
+                        states[time, x - 1, y + 1] = 2
                     if states[time - 1, x, y + 1] == 1:
                         states[time, x, y + 1] = 2
                     if states[time - 1, x + 1, y + 1] == 1:
-                        states[time, x + 1, y + 1] = 2
-                    if states[time - 1, x - 1, y + 1] == 1:
                         states[time, x + 1, y + 1] = 2
 
                 if states[time - 1, x, y] == 2 and wind_direction == 'S':  # It's on fire
                     # set it on fire!
                     if states[time - 1, x, y - 1] == 1:
                         states[time, x, y - 1] = 2
-                    if states[time - 1, x + 1, y - 1] == 1:
-                        states[time, x + 1, y - 1] = 2
                     if states[time - 1, x - 1, y - 1] == 1:
-                        states[time, x + 1, y + 1] = 2
+                        states[time, x - 1, y - 1] = 2
+                    if states[time - 1, x - 1, y - 1] == 1:
+                        states[time, x - 1, y - 1] = 2
 
                 if states[time - 1, x, y] == 2 and wind_direction == 'W':  # It's on fire
                     # set it on fire!
