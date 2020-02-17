@@ -44,7 +44,7 @@ def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_proba
     fire = np.zeros((time, *fuel_map))
 
     # initialize states by creating random ignition from ignition probability map
-    ignition[0] = np.random.choice([0, 1], size=fuel_map, p=ignition_probability_map)  # ignition must not happen in non fuel cells !!!
+    ignition[0] = np.random.choice([0, 1], size=fuel_map, p=ignition_probability_map)  # ignition must not happen in non fuel cells !!
     fire[0] = ignition[0] + fuel_map  # 0 = no fuel, 1 = fuel, 2 = fire
 
     for time in range(1, 1000, 1):
