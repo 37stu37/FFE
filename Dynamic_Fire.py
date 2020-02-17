@@ -1,12 +1,23 @@
-%%time
-!apt update
-!apt upgrade
-!apt install gdal-bin python-gdal python3-gdal
-# Install rtree - Geopandas requirment
-!apt install python3-rtree
-# Install Geopandas
-!pip install git+git://github.com/geopandas/geopandas.git
-# Install descartes - Geopandas requirment
-!pip install descartes
+import os
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import rasterio
+from rasterio.plot import show
+from osgeo import gdal_array
+import numpy as np
+import pandas as pd
+import imageio
+import random
 
+path_to_data = ''
+
+fuel_map = gpd.read_file('/content/drive/My Drive/04_Cloud/01_Work/GNS/008_FFE/merge.shp')
+fuel_map.plot()
+fuel_map.crs
+fuel_map.info()
+fuel_map.SHAPE_Area.min()
+
+
+raster = gdal_array.LoadFile('/content/drive/My Drive/04_Cloud/01_Work/GNS/008_FFE/FuelMapRaster.tif')
+type(raster)
 
