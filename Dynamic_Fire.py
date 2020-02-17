@@ -9,7 +9,8 @@ import pandas as pd
 import imageio
 import random
 
-path_to_data = ''
+path = ''
+
 
 # Load data needed
 # fuel_map = gpd.read_file('/content/drive/My Drive/04_Cloud/01_Work/GNS/008_FFE/merge.shp')
@@ -17,7 +18,7 @@ path_to_data = ''
 # fuel_map.crs
 # fuel_map.info()
 # fuel_map.SHAPE_Area.min()
-def Load_data(path):
+def Load_data(path=path):
     # load building map as a "fuel" map
     fuel_map = gdal_array.LoadFile(os.path.join(path, 'FuelMapRaster.tif'))
     # load probability of building ignition as an array
@@ -26,13 +27,26 @@ def Load_data(path):
     wind_df = pd.read('WindScenariosCopy.csv')
     return fuel_map, ignition_probability_map, wind_df
 
-fuel_map, ignition_probability_map, wind_df =  Load_data()
 
-def Fire_ignition(ignition_proba_array=ignition_probability_map):
+fuel_map, ignition_probability_map, wind_df = Load_data()
+
+# cells 0 = Clear, 1 = Fuel, 2 = Fire
+
+def Fire_ignition(ignition_proba_array=ignition_probability_map, fuel_map=fuel_map):
     random_ignition_proba_array = np.zeros_like(ignition_proba_array, float)
-    random_ignition_proba_array = np.random.uniform(low=0, high=1, size= ignition_proba_array)
+    random_ignition_proba_array = np.random.uniform(low=0, high=1, size=ignition_proba_array)
     # get position of fire
-    i, j = np.where(ignition_proba_array < random_ignition_proba_array)
-    return i, j
+    difference = ignition_proba_array - random_ignition_proba_array
+    difference[difference < 0] = 1
+    difference[difference > 0] = 0
+    ignition_map = difference + fuel_map
+    return ignition_map
 
+def Wind_scenario(wind_data=wind_df):
+    i = random(0, wind_data.shape[0])
+    wind_direction = wind_data.iloc[i, 2]
+    critical_distance = wind_data.iloc[i, 1]
+    return wind_direction, critical_distance
+
+def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_map):
 
