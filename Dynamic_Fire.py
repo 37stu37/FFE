@@ -62,9 +62,7 @@ def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_map):
     for x in range(1, fuel_map[0] - 1):
         for y in range(1, fuel_map[1] - 1):
 
-            if states[time - 1, x, y] == 2:  # It's on fire
-                states[time, x, y] = 0  # Put it out and clear it
-
+            if states[time - 1, x, y] == 2 and wind_direction == 'buffer':  # It's on fire
                 # If there's fuel surrounding it
                 # set it on fire!
                 if states[time - 1, x + 1, y] == 1:
@@ -75,3 +73,13 @@ def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_map):
                     states[time, x, y + 1] = 2
                 if states[time - 1, x, y - 1] == 1:
                     states[time, x, y - 1] = 2
+                if states[time - 1, x + 1, y - 1] == 1:
+                    states[time, x + 1, y - 1] = 2
+                if states[time - 1, x + 1, y + 1] == 1:
+                    states[time, x + 1, y + 1] = 2
+                if states[time - 1, x - 1 , y - 1] == 1:
+                    states[time, x - 1, y - 1] = 2
+                if states[time - 1, x - 1 , y - 1] == 1:
+                    states[time, x - 1, y - 1] = 2
+
+
