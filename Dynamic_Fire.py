@@ -32,7 +32,7 @@ fuel_map, ignition_probability_map, wind_df = Load_data()
 
 
 def Wind_scenario(wind_data=wind_df):
-    i = random(0, wind_data.shape[0])
+    i = np.random_integers(0, wind_data.shape[0])
     wind_direction = wind_data.iloc[i, 2]
     critical_distance = wind_data.iloc[i, 1]
     return wind_direction, critical_distance
@@ -144,3 +144,8 @@ def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_proba
                             states[time, x - critical_distance, y] = 2
                         if states[time - 1, x, y + critical_distance] == 1:
                             states[time, x, y + critical_distance] = 2
+
+                    if np.array_equal(fire[time], fire[time - 1]) == True:
+                        pass
+                    else:
+                        continue
