@@ -20,9 +20,9 @@ path = ''
 # fuel_map.SHAPE_Area.min()
 def Load_data(path=path):
     # load building map as a "fuel" map
-    fuel_map = gdal_array.LoadFile(os.path.join(path, 'FuelMapRaster.tif'))
+    fuel_map = gdal_array.LoadFile(os.path.join(path, 'FuelMapRaster.tif'))  # 0 = no fuel; 1 = fuel
     # load probability of building ignition as an array
-    ignition_probability_map = gdal_array.LoadFile('FireProba.tif')
+    ignition_probability_map = gdal_array.LoadFile('FireProba.tif')  # proba from 0 to 1
     # load wind data
     wind_df = pd.read('WindScenariosCopy.csv')
     return fuel_map, ignition_probability_map, wind_df
@@ -30,17 +30,6 @@ def Load_data(path=path):
 
 fuel_map, ignition_probability_map, wind_df = Load_data()
 
-# cells 0 = Clear, 1 = Fuel, 2 = Fire
-
-# def Fire_ignition(ignition_proba_array=ignition_probability_map, fuel_map=fuel_map):
-#     random_ignition_proba_array = np.zeros_like(ignition_proba_array, float)
-#     random_ignition_proba_array = np.random.uniform(low=0, high=1, size=ignition_proba_array)
-#     # get position of fire
-#     difference = ignition_proba_array - random_ignition_proba_array
-#     difference[difference < 0] = 1
-#     difference[difference > 0] = 0
-#     ignition_map = difference + fuel_map
-#     return ignition_map
 
 def Wind_scenario(wind_data=wind_df):
     i = random(0, wind_data.shape[0])
@@ -51,105 +40,107 @@ def Wind_scenario(wind_data=wind_df):
 def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_probability_map):
     # states hold the state of each cell
     time = 1000
-    states = np.zeros((time, *fuel_map))
+    ignition = np.zeros((time, *fuel_map))
+    fire = np.zeros((time, *fuel_map))
 
-    # initialize states by creating random ignition from ignition map
-    states[0] = np.random.choice([0, 2], size=fuel_map, p=ignition_probability_map)
-    # Make a copy of the original states
-    time = time + 1
-    states[time] = states[time - 1].copy()
+    # initialize states by creating random ignition from ignition probability map
+    ignition[0] = np.random.choice([0, 1], size=fuel_map, p=ignition_probability_map)
+    fire[0] = ignition[0] + fuel_map  # 0 = no fuel, 1 = fuel, 2 = fire
 
-    for x in range(1, fuel_map[0] - 1):
-        for y in range(1, fuel_map[1] - 1):
-            for d in range(critical_distance, 1, -1):
-                if states[time - 1, x, y] == 2 and wind_direction == 'buffer':  # It's on fire
-                    # If there's fuel surrounding it
-                    # set it on fire!
-                    if states[time - 1, x - critical_distance, y + critical_distance] == 1:
-                        states[time, x - critical_distance, y + critical_distance] = 2
-                    if states[time - 1, x, y + critical_distance] == 1:
-                        states[time, x, y + critical_distance] = 2
-                    if states[time - 1, x + critical_distance, y + critical_distance] == 1:
-                        states[time, x + critical_distance, y + critical_distance] = 2
-                    if states[time - 1, x + critical_distance, y] == 1:
-                        states[time, x + critical_distance, y] = 2
-                    if states[time - 1, x + critical_distance, y - critical_distance] == 1:
-                        states[time, x + critical_distance, y - critical_distance] = 2
-                    if states[time - 1, x, y - critical_distance] == 1:
-                        states[time, x, y - critical_distance] = 2
-                    if states[time - 1, x - critical_distance, y - critical_distance] == 1:
-                        states[time, x - critical_distance, y - critical_distance] = 2
-                    if states[time - 1, x - critical_distance, y] == 1:
-                        states[time, x - critical_distance, y] = 2
+    for time in range(1, 1000, 1):
+        # Make a copy of the original states
+        states[time] = states[time - 1].copy()
+        for x in range(1, fuel_map[0] - 1):
+            for y in range(1, fuel_map[1] - 1):
+                for d in range(critical_distance, 1, -1):
+                    if states[time - 1, x, y] == 2 and wind_direction == 'buffer':  # It's on fire
+                        # If there's fuel surrounding it
+                        # set it on fire!
+                        if states[time - 1, x - critical_distance, y + critical_distance] == 1:
+                            states[time, x - critical_distance, y + critical_distance] = 2
+                        if states[time - 1, x, y + critical_distance] == 1:
+                            states[time, x, y + critical_distance] = 2
+                        if states[time - 1, x + critical_distance, y + critical_distance] == 1:
+                            states[time, x + critical_distance, y + critical_distance] = 2
+                        if states[time - 1, x + critical_distance, y] == 1:
+                            states[time, x + critical_distance, y] = 2
+                        if states[time - 1, x + critical_distance, y - critical_distance] == 1:
+                            states[time, x + critical_distance, y - critical_distance] = 2
+                        if states[time - 1, x, y - critical_distance] == 1:
+                            states[time, x, y - critical_distance] = 2
+                        if states[time - 1, x - critical_distance, y - critical_distance] == 1:
+                            states[time, x - critical_distance, y - critical_distance] = 2
+                        if states[time - 1, x - critical_distance, y] == 1:
+                            states[time, x - critical_distance, y] = 2
 
-                if states[time - 1, x, y] == 2 and wind_direction == 'N':  # It's on fire
-                    # set it on fire!
-                    if states[time - 1, x - critical_distance, y + critical_distance] == 1:
-                        states[time, x - critical_distance, y + critical_distance] = 2
-                    if states[time - 1, x, y + critical_distance] == 1:
-                        states[time, x, y + critical_distance] = 2
-                    if states[time - 1, x + critical_distance, y + critical_distance] == 1:
-                        states[time, x + critical_distance, y + critical_distance] = 2
+                    if states[time - 1, x, y] == 2 and wind_direction == 'N':  # It's on fire
+                        # set it on fire!
+                        if states[time - 1, x - critical_distance, y + critical_distance] == 1:
+                            states[time, x - critical_distance, y + critical_distance] = 2
+                        if states[time - 1, x, y + critical_distance] == 1:
+                            states[time, x, y + critical_distance] = 2
+                        if states[time - 1, x + critical_distance, y + critical_distance] == 1:
+                            states[time, x + critical_distance, y + critical_distance] = 2
 
-                if states[time - 1, x, y] == 2 and wind_direction == 'NE':  # It's on fire
-                    # set it on fire!
-                    if states[time - 1, x, y + critical_distance] == 1:
-                        states[time, x, y + critical_distance] = 2
-                    if states[time - 1, x + critical_distance, y + critical_distance] == 1:
-                        states[time, x + critical_distance, y + critical_distance] = 2
-                    if states[time - 1, x + critical_distance, y] == 1:
-                        states[time, x + critical_distance, y] = 2
+                    if states[time - 1, x, y] == 2 and wind_direction == 'NE':  # It's on fire
+                        # set it on fire!
+                        if states[time - 1, x, y + critical_distance] == 1:
+                            states[time, x, y + critical_distance] = 2
+                        if states[time - 1, x + critical_distance, y + critical_distance] == 1:
+                            states[time, x + critical_distance, y + critical_distance] = 2
+                        if states[time - 1, x + critical_distance, y] == 1:
+                            states[time, x + critical_distance, y] = 2
 
-                if states[time - 1, x, y] == 2 and wind_direction == 'E':  # It's on fire
-                    # set it on fire!
-                    if states[time - 1, x + critical_distance, y + critical_distance] == 1:
-                        states[time, x + critical_distance, y + critical_distance] = 2
-                    if states[time - 1, x + critical_distance, y] == 1:
-                        states[time, x + critical_distance, y] = 2
-                    if states[time - 1, x + critical_distance, y - critical_distance] == 1:
-                        states[time, x + critical_distance, y + critical_distance] = 2
+                    if states[time - 1, x, y] == 2 and wind_direction == 'E':  # It's on fire
+                        # set it on fire!
+                        if states[time - 1, x + critical_distance, y + critical_distance] == 1:
+                            states[time, x + critical_distance, y + critical_distance] = 2
+                        if states[time - 1, x + critical_distance, y] == 1:
+                            states[time, x + critical_distance, y] = 2
+                        if states[time - 1, x + critical_distance, y - critical_distance] == 1:
+                            states[time, x + critical_distance, y + critical_distance] = 2
 
-                if states[time - 1, x, y] == 2 and wind_direction == 'SE':  # It's on fire
-                    # set it on fire!
-                    if states[time - 1, x + critical_distance, y] == 1:
-                        states[time, x + critical_distance, y] = 2
-                    if states[time - 1, x + critical_distance, y - critical_distance] == 1:
-                        states[time, x + critical_distance, y + critical_distance] = 2
-                    if states[time - 1, x, y - critical_distance] == 1:
-                        states[time, x, y - critical_distance] = 2
+                    if states[time - 1, x, y] == 2 and wind_direction == 'SE':  # It's on fire
+                        # set it on fire!
+                        if states[time - 1, x + critical_distance, y] == 1:
+                            states[time, x + critical_distance, y] = 2
+                        if states[time - 1, x + critical_distance, y - critical_distance] == 1:
+                            states[time, x + critical_distance, y + critical_distance] = 2
+                        if states[time - 1, x, y - critical_distance] == 1:
+                            states[time, x, y - critical_distance] = 2
 
-                if states[time - 1, x, y] == 2 and wind_direction == 'S':  # It's on fire
-                    # set it on fire!
-                    if states[time - 1, x, y - critical_distance] == 1:
-                        states[time, x, y - critical_distance] = 2
-                    if states[time - 1, x - critical_distance, y - critical_distance] == 1:
-                        states[time, x - critical_distance, y - critical_distance] = 2
-                    if states[time - 1, x + critical_distance, y - critical_distance] == 1:
-                        states[time, x + critical_distance, y - critical_distance] = 2
+                    if states[time - 1, x, y] == 2 and wind_direction == 'S':  # It's on fire
+                        # set it on fire!
+                        if states[time - 1, x, y - critical_distance] == 1:
+                            states[time, x, y - critical_distance] = 2
+                        if states[time - 1, x - critical_distance, y - critical_distance] == 1:
+                            states[time, x - critical_distance, y - critical_distance] = 2
+                        if states[time - 1, x + critical_distance, y - critical_distance] == 1:
+                            states[time, x + critical_distance, y - critical_distance] = 2
 
-                if states[time - 1, x, y] == 2 and wind_direction == 'SW':  # It's on fire
-                    # set it on fire!
-                    if states[time - 1, x, y - critical_distance] == 1:
-                        states[time, x, y - critical_distance] = 2
-                    if states[time - 1, x - critical_distance, y - critical_distance] == 1:
-                        states[time, x - critical_distance, y - critical_distance] = 2
-                    if states[time - 1, x - critical_distance, y] == 1:
-                        states[time, x - critical_distance, y] = 2
+                    if states[time - 1, x, y] == 2 and wind_direction == 'SW':  # It's on fire
+                        # set it on fire!
+                        if states[time - 1, x, y - critical_distance] == 1:
+                            states[time, x, y - critical_distance] = 2
+                        if states[time - 1, x - critical_distance, y - critical_distance] == 1:
+                            states[time, x - critical_distance, y - critical_distance] = 2
+                        if states[time - 1, x - critical_distance, y] == 1:
+                            states[time, x - critical_distance, y] = 2
 
-                if states[time - 1, x, y] == 2 and wind_direction == 'W':  # It's on fire
-                    # set it on fire!
-                    if states[time - 1, x - critical_distance, y + critical_distance] == 1:
-                        states[time, x - critical_distance, y + critical_distance] = 2
-                    if states[time - 1, x - critical_distance, y - critical_distance] == 1:
-                        states[time, x - critical_distance, y - critical_distance] = 2
-                    if states[time - 1, x - critical_distance, y] == 1:
-                        states[time, x - critical_distance, y] = 2
+                    if states[time - 1, x, y] == 2 and wind_direction == 'W':  # It's on fire
+                        # set it on fire!
+                        if states[time - 1, x - critical_distance, y + critical_distance] == 1:
+                            states[time, x - critical_distance, y + critical_distance] = 2
+                        if states[time - 1, x - critical_distance, y - critical_distance] == 1:
+                            states[time, x - critical_distance, y - critical_distance] = 2
+                        if states[time - 1, x - critical_distance, y] == 1:
+                            states[time, x - critical_distance, y] = 2
 
-                if states[time - 1, x, y] == 2 and wind_direction == 'NW':  # It's on fire
-                    # set it on fire!
-                    if states[time - 1, x - critical_distance, y + critical_distance] == 1:
-                        states[time, x - critical_distance, y + critical_distance] = 2
-                    if states[time - 1, x - critical_distance, y] == 1:
-                        states[time, x - critical_distance, y] = 2
-                    if states[time - 1, x, y + critical_distance] == 1:
-                        states[time, x, y + critical_distance] = 2
+                    if states[time - 1, x, y] == 2 and wind_direction == 'NW':  # It's on fire
+                        # set it on fire!
+                        if states[time - 1, x - critical_distance, y + critical_distance] == 1:
+                            states[time, x - critical_distance, y + critical_distance] = 2
+                        if states[time - 1, x - critical_distance, y] == 1:
+                            states[time, x - critical_distance, y] = 2
+                        if states[time - 1, x, y + critical_distance] == 1:
+                            states[time, x, y + critical_distance] = 2
