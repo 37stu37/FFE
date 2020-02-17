@@ -53,7 +53,7 @@ def Fire_propagation(fuel_map, wind_direction, critical_distance, ignition_proba
     time = 1000
     states = np.zeros((time, *fuel_map))
 
-    # initialize states by creating random fuel and clear cells
+    # initialize states by creating random ignition from ignition map
     states[0] = np.random.choice([0, 2], size=fuel_map, p=ignition_probability_map)
     # Make a copy of the original states
     time = time + 1
