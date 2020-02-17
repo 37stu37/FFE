@@ -21,16 +21,16 @@ def Load_data(path):
     # load building map as a "fuel" map
     fuel_map = gdal_array.LoadFile(os.path.join(path, 'FuelMapRaster.tif'))
     # load probability of building ignition as an array
-    ignition_proba = gdal_array.LoadFile('FireProba.tif')
+    ignition_probability_map = gdal_array.LoadFile('FireProba.tif')
     # load wind data
     wind_df = pd.read('WindScenariosCopy.csv')
-    return fuel_map, ignition_proba, wind_df
+    return fuel_map, ignition_probability_map, wind_df
 
-fuel_map, ignition_proba, wind_df =  Load_data()
+fuel_map, ignition_probability_map, wind_df =  Load_data()
 
-def Fire_ignition(ignition_proba_array=ignition_proba):
+def Fire_ignition(ignition_proba_array=ignition_probability_map):
     random_ignition_proba_array = np.zeros_like(ignition_proba_array, float)
-    random_ignition_proba_array = np.random.uniform(low=0, high=1, size= ignition_proba_array))
+    random_ignition_proba_array = np.random.uniform(low=0, high=1, size= ignition_proba_array)
     # get position of fire
     i, j = np.where(ignition_proba_array < random_ignition_proba_array)
     return i, j
