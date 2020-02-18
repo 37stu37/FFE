@@ -147,7 +147,7 @@ def fire_propagation(scenarios, fuel=fuel_map, wind=wind_direction, distance=cri
                             if fire[time - 1, x, y + distance] == 1:
                                 fire[time, x, y + distance] = 2
 
-                            fire[time].pause(0.1)
+                        fire[time].plot()
 
                         if np.array_equal(fire[time], fire[time - 1]) == True:
                             fire_list.append(fire[time])
