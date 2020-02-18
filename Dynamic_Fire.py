@@ -154,4 +154,4 @@ def fire_propagation(scenarios, fuel=fuel_map, wind=wind_direction, distance=cri
         return fire_list
 
 
-fire_maps = fire_propagation()
+fire_maps = fire_propagation(1)
