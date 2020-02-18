@@ -37,17 +37,18 @@ wind_direction, critical_distance = wind_scenario()
 
 def fire_propagation(scenarios, fuel=fuel_map, wind=wind_direction, distance=critical_distance,
                      ignition_map=ignition_probability_map):
-    # fire hold the state of each cell
-    time_total = 1000
-    ignition = np.zeros((time_total, *fuel))
-    fire = np.zeros((time_total, *fuel))
-    fire_list = []
-    # initialize fire by creating random ignition from ignition probability map
-    ignition[0] = np.random.choice([0, 1], size=fuel,
-                                   p=ignition_map)  # ignition must not happen in non fuel cells !!
-    fire[0] = ignition[0] + fuel  # 0 = no fuel, 1 = fuel, 2 = fire
 
     for scenario in range(scenarios):
+        # fire hold the state of each cell
+        time_total = 1000
+        ignition = np.zeros((time_total, *fuel))
+        fire = np.zeros((time_total, *fuel))
+        fire_list = []
+        # initialize fire by creating random ignition from ignition probability map
+        ignition[0] = np.random.choice([0, 1], size=fuel,
+                                       p=ignition_map)  # ignition must not happen in non fuel cells !!
+        fire[0] = ignition[0] + fuel  # 0 = no fuel, 1 = fuel, 2 = fire
+
         for time in range(1, time_total, 1):
             # Make a copy of the original fire
             fire[time] = fire[time - 1].copy()
