@@ -42,7 +42,7 @@ from PIL import Image
 from matplotlib.pyplot import imshow
 
 path = '/content/drive/My Drive/04_Cloud/01_Work/GNS/008_FFE/Colab_folder'
-!ls '/content/drive/My Drive/04_Cloud/01_Work/GNS/008_FFE/Colab_folder'
+# !ls '/content/drive/My Drive/04_Cloud/01_Work/GNS/008_FFE/Colab_folder'
 
 def load_data(path_to_data=path):
     # load building map as a "fuel" map
@@ -220,7 +220,12 @@ def fire_propagation(scenarios, fuel=fuel_map, ignition_proba=ignition_probabili
 
     return fires
 
-final_fires_list = fire_propagation(5)
+fires_list = fire_propagation(5)
 
-final_fires_array = np.array(final_fire_list)
+final_fires_array = np.array(fires_list)
 fire_impact = np.sum(final_fires_array)
+
+fig, ax = plt.subplots(nrows=1, ncols=1)
+im0 = ax[0].imshow(fire_impact, cmap='jet', aspect='auto')
+plt.colorbar(im0, ax=ax)
+plt.show()
