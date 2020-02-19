@@ -88,7 +88,7 @@ plt.colorbar(im0, ax=ax)
 plt.show()
 
 def fire_propagation(scenarios, fuel=fuel_map, ignition_proba=ignition_probability_map):
-    fire_final_list = []
+    fires = []
     for scenario in range(scenarios):
         wind, distance = wind_scenario()
         print(wind, distance)
@@ -211,14 +211,14 @@ def fire_propagation(scenarios, fuel=fuel_map, ignition_proba=ignition_probabili
                         plt.show()
 
                         if np.array_equal(fire[time], fire[time - 1]) == True:
-                            fire_list.append(fire[time])
+                            fires.append(fire[time])
                             pass
                         else:
                             continue
 
-          gif(fire, scenario)
+        # gif(fire, scenario)
 
-    return fire_final_list
+    return fires
 
 final_fires_list = fire_propagation(5)
 
