@@ -109,8 +109,8 @@ def fire_propagation(scenarios, fuel=fuel_map, ignition_proba=ignition_probabili
         for time in range(1, time_total, 1):
             # Make a copy of the original fire
             fire[time] = fire[time - 1].copy()
-            for x in range(1, fire[0] - 1):
-                for y in range(1, fire[1] - 1):
+            for x in range(1, fire[0].shape[0] - 1):
+                for y in range(1, fire[0].shape[1] - 1):
                     for d in range(distance, 1, -1):
                         if fire[time - 1, x, y] == 2 and wind == 'buffer':  # It's on fire
                             # If there's fuel surrounding it
@@ -205,7 +205,7 @@ def fire_propagation(scenarios, fuel=fuel_map, ignition_proba=ignition_probabili
                                 fire[time, x, y + distance] = 2
 
                         # plot map
-                        fig, ax = plt.subplots(ncols=2)
+                        fig, ax = plt.subplots()
                         im0 = ax[0].imshow(fire[time], cmap='jet', aspect='auto')
                         plt.colorbar(im0, ax=ax) 
                         plt.show()
