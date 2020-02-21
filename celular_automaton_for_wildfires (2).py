@@ -7,42 +7,22 @@ Original file is located at
     https://colab.research.google.com/github/37stu37/FFE/blob/master/Dynamic_fire_test_urban.ipynb
 """
 
-# Commented out IPython magic to ensure Python compatibility.
-# %%time 
-# !apt update
-# !apt upgrade
-# !apt install gdal-bin python-gdal python3-gdal 
-# # Install rtree - Geopandas requirment
-# !apt install python3-rtree 
-# # Install Geopandas
-# !pip install git+git://github.com/geopandas/geopandas.git
-# # Install descartes - Geopandas requirment
-# !pip install descartes 
-# 
-# # install rasterio
-# !pip install rasterio
-
-# Load the Drive helper and mount
-from google.colab import drive
-# This will prompt for authorization.
-drive.mount('/content/drive')
-
 import os
-import sys
+# import sys
 import geopandas as gpd
 import matplotlib.pyplot as plt
-import rasterio
-from rasterio.plot import show
+# import rasterio
+# from rasterio.plot import show
 from osgeo import gdal_array
 import numpy as np
 import pandas as pd
 import imageio
-import random
-from PIL import Image
+# import random
+# from PIL import Image
 from matplotlib.pyplot import imshow
 
 path = '/content/drive/My Drive/04_Cloud/01_Work/GNS/008_FFE/Colab_folder'
-# !ls '/content/drive/My Drive/04_Cloud/01_Work/GNS/008_FFE/Colab_folder'
+
 
 def load_data(path_to_data=path):
     # load building map as a "fuel" map
@@ -83,7 +63,6 @@ def gif(fireMap, s):
 fig, ax = plt.subplots(ncols=2)
 im0 = ax[0].imshow(fuel_map, cmap='jet', aspect='auto')
 im1 = ax[1].imshow(ignition_probability_map, cmap='jet', aspect='auto')
-
 plt.colorbar(im0, ax=ax) 
 plt.show()
 

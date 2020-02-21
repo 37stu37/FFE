@@ -7,41 +7,53 @@ Original file is located at
     https://colab.research.google.com/drive/1h4VIAr0c-kP5Z6t_ZjaVd9JlejQb95qF
 """
 
-# Commented out IPython magic to ensure Python compatibility.
-# %%time 
-# !apt update
-# !apt upgrade
-# !apt install gdal-bin python-gdal python3-gdal 
-# # Install rtree - Geopandas requirment
-# !apt install python3-rtree 
-# # Install Geopandas
-# !pip install git+git://github.com/geopandas/geopandas.git
-# # Install descartes - Geopandas requirment
-# !pip install descartes 
-# 
-# # install rasterio
-# !pip install rasterio
-# 
-# # install mesa
-# !pip install git+https://github.com/projectmesa/mesa
-# 
-# # install mesa-geo
-# !pip install git+https://github.com/corvince/mesa-geo.git#egg=mesa-geo
-
-# Commented out IPython magic to ensure Python compatibility.
-import random
-
-import numpy as np
-
+import os
+import sys
 import matplotlib.pyplot as plt
-# %matplotlib inline
-
+from osgeo import gdal_array
+import numpy as np
+import pandas as pd
+import imageio
+import random
+from PIL import Image
+from matplotlib.pyplot import imshow
 from mesa import Model, Agent
 from mesa.time import RandomActivation
 from mesa.space import Grid
 from mesa.datacollection import DataCollector
 from mesa.batchrunner import BatchRunner
-from mesa_geo import GeoSpace, GeoAgent, AgentCreator
+
+
+path = 'E:\Current_work\FFE\dynamic_fire\Mesa'
+
+def load_data(path_to_data=path):
+    # load building map as a "fuel" map
+    fuel = gdal_array.LoadFile(os.path.join(path_to_data, 'GD_fuel_map_crop.tif'))  # 0 = no fuel; 1 = fuel
+    fuel[fuel < 0] = 0
+    # load probability of building ignition as an array
+    ignition = gdal_array.LoadFile(os.path.join(path_to_data, 'GD_ignit_prob_crop.tif'))  # probability from 0 to 1
+    ignition[ignition < 0] = 0
+    # load wind data
+    wind = pd.read_csv(os.path.join(path_to_data, 'GD_wind.csv'))
+    return fuel, ignition, wind
+
+fuel_map, ignition_probability_map, wind_df = load_data()
+
+def wind_scenario(wind_data=wind_df):
+    i = np.random.randint(0, wind_data.shape[0])
+    wind = wind_data.iloc[i, 2]
+    distance = wind_data.iloc[i, 1]
+    return wind, distance
+
+def plot(title, map1, map2):
+    fig, ax = plt.subplots(ncols=2)
+    im0 = ax[0].imshow(map1, cmap='jet', aspect='auto')
+    im1 = ax[1].imshow(map2, cmap='jet', aspect='auto')
+    plt.colorbar(im0, ax=ax[0])
+    plt.colorbar(im1, ax=ax[1])
+    plt.show()
+
+plot("test initial map", fuel_map, ignition_probability_map)
 
 class TreeCell(Agent):
     '''
