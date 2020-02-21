@@ -7,6 +7,10 @@ Original file is located at
     https://colab.research.google.com/drive/1h4VIAr0c-kP5Z6t_ZjaVd9JlejQb95qF
 """
 
+# might require
+# conda install fiona pyproj rtree shapely
+# pip install mesa-geo
+
 import os
 import sys
 import matplotlib.pyplot as plt
