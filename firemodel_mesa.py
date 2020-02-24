@@ -52,58 +52,68 @@ def wind_scenario(wind_data=wind):
     return wind, distance
 
 
-class Buildings(GeoAgent):
+class Building(Agent):
     '''
-    building footprint.
-    Conditions: "Fine", "On Fire", "Burned Out"
 
+        condition: Can be "Fine", "On Fire", or "Burned Out"
+
+    unique_id isn't strictly necessary here, but it's good practice to give one to each
+    agent anyway.
     '''
-    def __init__(self, unique_id, model, shape):
-        super().__init__(unique_id, model, shape)
+
+    def __init__(self, model, pos):
+        '''
+        Create a new tree.
+        Args:
+            pos: The tree's coordinates on the grid. Used as the unique_id
+        '''
+        super().__init__(pos, model)
+        self.pos = pos
+        self.unique_id = pos
         self.condition = "Fine"
-        wind_direction, critical_distance = wind_scenario()
-        self.direction = wind_direction
-        self.distance = critical_distance
 
     def step(self):
         '''
-        if building is on fire, spread it to trees according to wind conditions
+        If the building is on fire, spread it to fine buildings nearby.
         '''
         if self.condition == "On Fire":
-            neighbors = self.model.grid.get_neighbors(self.pos, moore=True, include_center=False, radius=self.distance)
+            neighbors = self.model.grid.get_neighbors(self.pos, moore=True, radius=12)
             for neighbor in neighbors:
                 if neighbor.condition == "Fine":
                     neighbor.condition = "On Fire"
             self.condition = "Burned Out"
 
 
-def count_type(self):
+class WellyFire(Model):
     '''
-    Helper method to count trees in a given condition in a given model.
+    Simple city Fire model.
     '''
-    count = 0
-    for agent in self.schedule.agents:
-        if agent.condition == "Burned out":
-            count += 1
-    return count
 
+    def __init__(self):
+        '''
+        Create a new city fire model.
 
-class GeoModel(Model):
-    def __init__(self, scenario):
+        Args:
+            height, width: The size of the grid to model
+            density: What fraction of grid cells have a tree in them.
+        '''
+        # Initialize model parameters
         self.grid = GeoSpace()
-        self.scenario = scenario
-
         buildings_agent_kwargs = dict(model=self)
-        AC = AgentCreator(agent_class=Buildings, agent_kwargs=buildings_agent_kwargs, )
-        agents = AC.from_GeoDataFrame(gdf_buildings, unique_id="TARGET_FID")
+        ac = AgentCreator(agent_class=Building, agent_kwargs=buildings_agent_kwargs, )
+        agents = ac.from_GeoDataFrame(gdf_buildings, unique_id="TARGET_FID")
         self.grid.add_agents(agents)
+
+        # Set up model objects
         self.schedule = RandomActivation(self)
-        self.datacollector = DataCollector(model_reporters={"Burned Out": count_type(self)})
-        # Set up ignition
-        for agent in agents:
-            if random.random() < agent.IgnProb_bl:
-                agent.condition == "On Fire"
-                self.schedule.add(agent)
+        self.dc = DataCollector({"Fine": lambda m: self.count_type(m, "Fine"),
+                                 "On Fire": lambda m: self.count_type(m, "On Fire"),
+                                 "Burned Out": lambda m: self.count_type(m, "Burned Out")})
+
+        # Place a tree in each cell with Prob = density
+        for a in agents:
+            if random.random() < a.IgnProb_bl:
+                a.condition = "On Fire"
         self.running = True
 
     def step(self):
@@ -111,7 +121,43 @@ class GeoModel(Model):
         Advance the model by one step.
         '''
         self.schedule.step()
-        self.datacollector.collect(self)
+        self.dc.collect(self)
         # Halt if no more fire
         if self.count_type(self, "On Fire") == 0:
             self.running = False
+
+    @staticmethod
+    def count_type(model, tree_condition):
+        '''
+        Helper method to count trees in a given condition in a given model.
+        '''
+        count = 0
+        for tree in model.schedule.agents:
+            if tree.condition == tree_condition:
+                count += 1
+        return count
+
+
+fire = WellyFire()
+fire.run_model()
+
+# plot output
+results = fire.dc.get_model_vars_dataframe()
+results.plot()
+
+# batch run
+param_set = dict(height=50, # Height and width are constant
+                 width=50,
+                 # Vary density from 0.01 to 1, in 0.01 increments:
+                 density=np.linspace(0,1,101)[1:])
+# At the end of each model run, calculate the fraction of trees which are Burned Out
+model_reporter = {"BurnedOut": lambda m: (WellyFire.count_type(m, "Burned Out") /
+                                          m.schedule.get_agent_count()) }
+# Create the batch runner
+param_run = BatchRunner(WellyFire, param_set, model_reporters=model_reporter, iterations=5)
+param_run.run_all()
+
+# output
+df = param_run.get_model_vars_dataframe()
+df.head()
+plt.hist(df.BurnedOut)
