@@ -41,10 +41,39 @@ bbox = box(minx, miny, maxx, maxy)
 
 gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
 
+# wind scenario
+wind = pd.read_csv(os.path.join(path, 'GD_wind.csv'))
+
+def wind_scenario(wind_data=wind):
+    i = np.random.randint(0, wind_data.shape[0])
+    wind = wind_data.iloc[i, 2]
+    distance = wind_data.iloc[i, 1]
+    return wind, distance
+
 
 class Buildings(GeoAgent):
+    '''
+    building footprint.
+    Conditions: "Fine", "On Fire", "Burned Out"
+
+    '''
     def __init__(self, unique_id, model, shape):
         super().__init__(unique_id, model, shape)
+        self.condition = "Fine"
+        wind_direction, critical_distance = wind_scenario()
+        self.direction = wind_direction
+        self.distance = critical_distance
+
+    def step(self):
+        '''
+        if building is on fire, spread it to trees according to wind conditions
+        '''
+        if self.condition == "On Fire":
+            neighbors = self.model.grid.get_neighbors(self.pos, moore=True, include_center=False, radius=self.distance)
+            for neighbor in neighbors:
+                if neighbor.condition == "Fine":
+                    neighbor.condition = "On Fire"
+            self.condition = "Burned Out"
 
 
 #
@@ -148,9 +177,35 @@ class GeoModel(Model):
         AC = AgentCreator(agent_class=Buildings, agent_kwargs=buildings_agent_kwargs, )
         agents = AC.from_GeoDataFrame(gdf_buildings, unique_id="TARGET_FID")
         self.grid.add_agents(agents)
+        self.schedule = RandomActivation(self)
+        self.dc = DataCollector({"Fine": lambda m: self.count_type(m, "Fine"),
+                                 "On Fire": lambda m: self.count_type(m, "On Fire"),
+                                 "Burned Out": lambda m: self.count_type(m, "Burned Out")})
+
+        # Set up ignition
+        for agent in agents:
+            if random.random() < agent.IgnProb_bl:
+                agent.condition == "On Fire"
+                self.schedule.add(agent)
+        self.running = True
+
+    def step(self):
+        '''
+        Advance the model by one step.
+        '''
+        self.schedule.step()
+        self.dc.collect(self)
+        # Halt if no more fire
+        if self.count_type(self, "On Fire") == 0:
+            self.running = False
 
 
-model = GeoModel()
-agent = model.grid.agents[0]
-print(agent.unique_id)
-agent.shape
+    def count_type(model, agent_condition):
+        '''
+        Helper method to count trees in a given condition in a given model.
+        '''
+        count = 0
+        for agent in model.schedule.agents:
+            if agent.condition == agent_condition:
+                count += 1
+        return count
