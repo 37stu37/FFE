@@ -40,6 +40,7 @@ maxx, maxy = 1749151, 5427195
 bbox = box(minx, miny, maxx, maxy)
 
 gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
+gdf_buildings.plot()
 
 # wind scenario
 wind = pd.read_csv(os.path.join(path, 'GD_wind.csv'))
@@ -76,6 +77,17 @@ class Buildings(GeoAgent):
             self.condition = "Burned Out"
 
 
+def count_type(self):
+    '''
+    Helper method to count trees in a given condition in a given model.
+    '''
+    count = 0
+    for agent in self.schedule.agents:
+        if agent.condition == "Burned out":
+            count += 1
+    return count
+
+
 class GeoModel(Model):
     def __init__(self, scenario):
         self.grid = GeoSpace()
@@ -86,13 +98,7 @@ class GeoModel(Model):
         agents = AC.from_GeoDataFrame(gdf_buildings, unique_id="TARGET_FID")
         self.grid.add_agents(agents)
         self.schedule = RandomActivation(self)
-        self.datacollector = DataCollector(
-            {
-                "Fine": lambda m: self.count_type(m, "Fine"),
-                "On Fire": lambda m: self.count_type(m, "On Fire"),
-                "Burned Out": lambda m: self.count_type(m, "Burned Out"),
-            }
-        )
+        self.datacollector = DataCollector(model_reporters={"Burned Out": count_type(self)})
         # Set up ignition
         for agent in agents:
             if random.random() < agent.IgnProb_bl:
@@ -109,13 +115,3 @@ class GeoModel(Model):
         # Halt if no more fire
         if self.count_type(self, "On Fire") == 0:
             self.running = False
-
-    def count_type(self, agent_condition):
-        '''
-        Helper method to count trees in a given condition in a given model.
-        '''
-        count = 0
-        for agent in self.schedule.agents:
-            if agent.condition == agent_condition:
-                count += 1
-        return count
