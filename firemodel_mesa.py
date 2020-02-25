@@ -117,20 +117,18 @@ class WellyFire(Model):
 
         # Set up agents
         print("{} set up agents in the WellyFire".format(len(agents)))
-        alreadySet = False
-        for agent in agents:
-            if not alreadySet:
-                agent.condition = 'On Fire'
-                alreadySet = True
-            self.schedule.add(agent)
+        # alreadySet = False
         # for agent in agents:
-        #     if random.random() < agent.IgnProb_bl:
-        #         agent.condition = "On Fire"
-        #         # print("{} started".format(agent.condition))
-        #         self.schedule.add(agent)
-        #     else:
-        #         agent.condition = "Fine"
-        #         self.schedule.add(agent)
+        #     if not alreadySet:
+        #         agent.condition = 'On Fire'
+        #         alreadySet = True
+        #     self.schedule.add(agent)
+        for agent in agents:
+            if random.random() < agent.IgnProb_bl:
+                agent.condition = "On Fire"
+            else:
+                agent.condition = "Fine"
+            self.schedule.add(agent)
 
     def step(self):
         """
