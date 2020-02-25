@@ -47,8 +47,8 @@ gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox
 gdf_buildings['IgnProb_bl'] = 0.1
 
 # plot map of agents
-# fig, ax = plt.subplots(1, 1)
-# gdf_buildings.plot(column='IgnProb_bl', ax=ax, legend=True)
+fig, ax = plt.subplots(1, 1)
+gdf_buildings.plot(column='IgnProb_bl', ax=ax, legend=True)
 
 # wind scenario
 wind = pd.read_csv(os.path.join(path, 'GD_wind.csv'))
@@ -75,28 +75,27 @@ class Buildings(GeoAgent):
         self.distance = critical_distance
 
     @property
-    def get_neighbors(self):
+    def count_neighbors_on_fire(self):
         neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-        neighbors_fine = [agent for agent in neighbors if
-                            agent.condition == "Fine" and agent.unique_id != self.unique_id]
-        print('{} got {} fine neighbor(s)'.format(self.unique_id, len(neighbors_fine)))
-        return neighbors_fine
+        neighbors_fire = [n for n in neighbors if n.condition == "On Fire" and n.unique_id != self.unique_id]
+        print('{} got {} fine neighbor(s)'.format(self.unique_id, len(neighbors_fire)))
+        return len(neighbors_fire)
 
-    def spread_fire(self, neighbors=None):
-        for n in neighbors:
-            n.condition = "On Fire"
-            print('neighbor {} is {}'.format(n.unique_id, n.condition))
-        self.condition = "Burned Out"
-        print('condition:{} {}'.format(self.unique_id, self.condition))
+    def spread_fire(self, count_neighbors):
+        if self.condition == "On Fire":
+            self.condition = "Burned Out"
+        if self.condition == "Fine" and count_neighbors != 0:
+            self.condition = "On Fire"
+        print('agent: {} condition: {}'.format(self.unique_id, self.condition))
 
 
     def step(self):
         '''
         if building is on fire, spread it to buildings according to wind conditions
         '''
-        if self.condition == "On Fire":
-            neighbors = self.get_neighbors
-            self.spread_fire(neighbors)
+        print("STEP AGENT")
+        neighbor_fires = self.count_neighbors_on_fire
+        self.spread_fire(neighbor_fires)
 
 
 class WellyFire(Model):
@@ -116,12 +115,6 @@ class WellyFire(Model):
 
         # Set up agents
         print("{} set up agents in the WellyFire".format(len(agents)))
-        # alreadySet = False
-        # for agent in agents:
-        #     if not alreadySet:
-        #         agent.condition = 'On Fire'
-        #         alreadySet = True
-        #     self.schedule.add(agent)
         for agent in agents:
             if random.random() < agent.IgnProb_bl:
                 agent.condition = "On Fire"
@@ -134,6 +127,8 @@ class WellyFire(Model):
         Advance the model by one step.
         if no building on Fire, stop the model
         """
+
+        # step in time
         print("STEP MODEL")
         self.schedule.step()
         # collect data
@@ -157,11 +152,6 @@ class WellyFire(Model):
 # Run model
 fire = WellyFire()
 fire.run_model()
-# fire.step()
-# for i in range(2):
-#     fire.step()
-
-
 # plot output
 results = fire.dc.get_model_vars_dataframe()
 results.head()
