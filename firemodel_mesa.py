@@ -78,15 +78,13 @@ class Buildings(GeoAgent):
         '''
         if building is on fire, spread it to buildings according to wind conditions
         '''
-        neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-        neighbors_id = [agent.unique_id for agent in neighbors if agent.condition == "Fine" and agent.unique_id != self.unique_id]
-        for i in neighbors_id:
-            print('self unique_id: {} & neighbor unique_id: {}'.format(self.unique_id, i))
-            if self.unique_id == i:
-                self.condition = "On Fire"
-                print('condition:{} {}'.format( self.unique_id, self.condition))
-        self.condition = "Burned Out"
-        print('condition:{} {}'.format(self.unique_id, self.condition))
+        if self.condition == "On Fire":
+            neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
+            neighbors_cooked = [agent for agent in neighbors if agent.condition == "Fine" and agent.unique_id != self.unique_id]
+            for i in neighbors_cooked:
+                i.condition = "On Fire"
+            self.condition = "Burned Out"
+            print('condition:{} {}'.format(self.unique_id, self.condition))
 
         # print('unique_id: {} condition:{}'.format(self.unique_id, self.condition))
         # if self.condition == "On Fire":
