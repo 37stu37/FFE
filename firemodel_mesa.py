@@ -25,6 +25,8 @@ from mesa.space import Grid
 from mesa.datacollection import DataCollector
 from mesa.batchrunner import BatchRunner
 from mesa_geo import GeoSpace, GeoAgent, AgentCreator
+from mesa.visualization.modules import CanvasGrid
+from mesa.visualization.ModularVisualization import ModularServer
 
 # pip install Pillow
 # pip install descartes
@@ -33,6 +35,7 @@ from mesa_geo import GeoSpace, GeoAgent, AgentCreator
 # pip install PyDrive
 
 path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+path = "G:/Sync/FFE/Mesa"
 
 # crop data
 minx, miny = 1748570, 5426959
@@ -43,23 +46,27 @@ gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox
 # gdf_buildings.plot()
 gdf_buildings['IgnProb_bl'] = 0.5
 
-fig, ax = plt.subplots(1, 1)
-gdf_buildings.plot(column='IgnProb_bl', ax=ax, legend=True)
+# plot map of agents
+# fig, ax = plt.subplots(1, 1)
+# gdf_buildings.plot(column='IgnProb_bl', ax=ax, legend=True)
 
 # wind scenario
 wind = pd.read_csv(os.path.join(path, 'GD_wind.csv'))
 
+
 def wind_scenario(wind_data=wind):
     i = np.random.randint(0, wind_data.shape[0])
-    wind = wind_data.iloc[i, 2]
-    distance = wind_data.iloc[i, 1]
-    return wind, distance
+    w = wind_data.iloc[i, 2]
+    d = wind_data.iloc[i, 1]
+    return w, d
+
 
 class Buildings(GeoAgent):
-    '''
+    """
     building footprint.
     Conditions: "Fine", "On Fire", "Burned Out"
-    '''
+    """
+
     def __init__(self, unique_id, model, shape):
         super().__init__(unique_id, model, shape)
         self.condition = "Fine"
@@ -69,41 +76,45 @@ class Buildings(GeoAgent):
 
     def step(self):
         '''
-        if building is on fire, spread it to trees according to wind conditions
+        if building is on fire, spread it to buildings according to wind conditions
         '''
+        neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
+        print("{} neighbors".format(len(neighbors)))
         if self.condition == "On Fire":
-            neighbors = self.model.grid.get_neighbors(self, moore=True, include_center=False, radius=self.distance)
             for neighbor in neighbors:
+                # print(len(neighbors))
                 if neighbor.condition == "Fine":
                     neighbor.condition = "On Fire"
             self.condition = "Burned Out"
 
 
-
 class WellyFire(Model):
     def __init__(self):
         self.grid = GeoSpace()
-
-        buildings_agent_kwargs = dict(model=self)
-        ac = AgentCreator(agent_class=Buildings, agent_kwargs=buildings_agent_kwargs, )
-        agents = ac.from_GeoDataFrame(gdf_buildings, unique_id="TARGET_FID")
-        self.grid.add_agents(agents)
-
-        # Set up model objects
         self.schedule = RandomActivation(self)
+        # agent located from shapefile
+        buildings_agent_kwargs = dict(model=self)
+        ac = AgentCreator(agent_class=Buildings, agent_kwargs=buildings_agent_kwargs)
+        agents = ac.from_GeoDataFrame(gdf_buildings, unique_id="TARGET_FID")
+        print("{} in the WellyFire".format(len(agents)))
+        self.grid.add_agents(agents)
         self.dc = DataCollector({"Fine": lambda m: self.count_type(m, "Fine"),
                                  "On Fire": lambda m: self.count_type(m, "On Fire"),
                                  "Burned Out": lambda m: self.count_type(m, "Burned Out")})
-
-        for a in agents:
-            if random.random() < a.IgnProb_bl:
-                a.condition = "On Fire"
         self.running = True
 
+        # Set up agents
+        for agent in agents:
+            if random.random() < agent.IgnProb_bl:
+                agent.condition = "On Fire"
+                # print("{} started".format(agent.condition))
+                self.schedule.add(agent)
+
     def step(self):
-        '''
+        """
         Advance the model by one step.
-        '''
+        if no building on Fire, stop the model
+        """
         self.schedule.step()
         self.dc.collect(self)
         # Halt if no more fire
@@ -122,27 +133,19 @@ class WellyFire(Model):
         return count
 
 
+# Run model
 fire = WellyFire()
 fire.run_model()
+# fire.step()
+# for i in range(2):
+#     fire.step()
+
 
 # plot output
 results = fire.dc.get_model_vars_dataframe()
 results.head()
-results.plot()
+# results.plot()
 
-# batch run
-# param_set = dict(height=50, # Height and width are constant
-#                  width=50,
-#                  # Vary density from 0.01 to 1, in 0.01 increments:
-#                  density=np.linspace(0,1,101)[1:])
-# # At the end of each model run, calculate the fraction of trees which are Burned Out
-# model_reporter = {"BurnedOut": lambda m: (WellyFire.count_type(m, "Burned Out") /
-#                                           m.schedule.get_agent_count()) }
-# Create the batch runner
-# param_run = BatchRunner(WellyFire, param_set, model_reporters=model_reporter, iterations=5)
-# param_run.run_all()
-#
-# # output
-# df = param_run.get_model_vars_dataframe()
-# df.head()
-# plt.hist(df.BurnedOut)
+from mesa.visualization.modules import CanvasGrid
+from mesa.visualization.ModularVisualization import ModularServer
+
