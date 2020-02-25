@@ -74,30 +74,29 @@ class Buildings(GeoAgent):
         self.direction = wind_direction
         self.distance = critical_distance
 
+    @property
+    def get_neighbors(self):
+        neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
+        neighbors_fine = [agent for agent in neighbors if
+                            agent.condition == "Fine" and agent.unique_id != self.unique_id]
+        print('{} got {} fine neighbor(s)'.format(self.unique_id, len(neighbors_fine)))
+        return neighbors_fine
+
+    def spread_fire(self, neighbors=None):
+        for n in neighbors:
+            n.condition = "On Fire"
+            print('neighbor {} is {}'.format(n.unique_id, n.condition))
+        self.condition = "Burned Out"
+        print('condition:{} {}'.format(self.unique_id, self.condition))
+
+
     def step(self):
         '''
         if building is on fire, spread it to buildings according to wind conditions
         '''
         if self.condition == "On Fire":
-            neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-            neighbors_cooked = [agent for agent in neighbors if agent.condition == "Fine" and agent.unique_id != self.unique_id]
-            for i in neighbors_cooked:
-                i.condition = "On Fire"
-            self.condition = "Burned Out"
-            print('condition:{} {}'.format(self.unique_id, self.condition))
-
-        # print('unique_id: {} condition:{}'.format(self.unique_id, self.condition))
-        # if self.condition == "On Fire":
-        #     print('{} neighbor(s) of {}'.format( len(neighbors), self.unique_id ))
-        #     for neighbor in neighbors:
-        #         print('neighbor:{} condition:{}'.format( neighbor.unique_id, neighbor.condition))
-        #         if self.unique_id == neighbor.unique_id: continue
-        #         if neighbor.condition == "Fine":
-        #             # if 0.9 < random.uniform(0.01, 1.0):
-        #                 print("neighbor {} Set on Fire !!!!".format(neighbor.unique_id))
-        #                 neighbor.condition = "On Fire"
-        #     self.condition = "Burned Out"
-        #     print('condition:{} {}'.format( self.unique_id, self.condition))
+            neighbors = self.get_neighbors
+            self.spread_fire(neighbors)
 
 
 class WellyFire(Model):
@@ -135,7 +134,9 @@ class WellyFire(Model):
         Advance the model by one step.
         if no building on Fire, stop the model
         """
+        print("STEP MODEL")
         self.schedule.step()
+        # collect data
         self.dc.collect(self)
         # Halt if no more fire
         if self.count_type(self, "On Fire") == 0:
