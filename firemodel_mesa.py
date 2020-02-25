@@ -34,8 +34,8 @@ from mesa.visualization.ModularVisualization import ModularServer
 # pip install mesa-geo
 # pip install PyDrive
 
-path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-# path = "G:/Sync/FFE/Mesa"
+# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+path = "G:/Sync/FFE/Mesa"
 
 # crop data
 minx, miny = 1748570, 5426959
@@ -44,7 +44,7 @@ bbox = box(minx, miny, maxx, maxy)
 
 gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
 # gdf_buildings.plot()
-gdf_buildings['IgnProb_bl'] = 0.5
+gdf_buildings['IgnProb_bl'] = 0.1
 
 # plot map of agents
 # fig, ax = plt.subplots(1, 1)
@@ -79,13 +79,27 @@ class Buildings(GeoAgent):
         if building is on fire, spread it to buildings according to wind conditions
         '''
         neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-        print("{} neighbors".format(len(neighbors)))
-        if self.condition == "On Fire":
-            for neighbor in neighbors:
-                # print(len(neighbors))
-                if neighbor.condition == "Fine":
-                    neighbor.condition = "On Fire"
-            self.condition = "Burned Out"
+        neighbors_id = [agent.unique_id for agent in neighbors if agent.condition == "Fine" and agent.unique_id != self.unique_id]
+        for i in neighbors_id:
+            print('self unique_id: {} & neighbor unique_id: {}'.format(self.unique_id, i))
+            if self.unique_id == i:
+                self.condition = "On Fire"
+                print('condition:{} {}'.format( self.unique_id, self.condition))
+        self.condition = "Burned Out"
+        print('condition:{} {}'.format(self.unique_id, self.condition))
+
+        # print('unique_id: {} condition:{}'.format(self.unique_id, self.condition))
+        # if self.condition == "On Fire":
+        #     print('{} neighbor(s) of {}'.format( len(neighbors), self.unique_id ))
+        #     for neighbor in neighbors:
+        #         print('neighbor:{} condition:{}'.format( neighbor.unique_id, neighbor.condition))
+        #         if self.unique_id == neighbor.unique_id: continue
+        #         if neighbor.condition == "Fine":
+        #             # if 0.9 < random.uniform(0.01, 1.0):
+        #                 print("neighbor {} Set on Fire !!!!".format(neighbor.unique_id))
+        #                 neighbor.condition = "On Fire"
+        #     self.condition = "Burned Out"
+        #     print('condition:{} {}'.format( self.unique_id, self.condition))
 
 
 class WellyFire(Model):
@@ -104,11 +118,21 @@ class WellyFire(Model):
         self.running = True
 
         # Set up agents
+        print("{} set up agents in the WellyFire".format(len(agents)))
+        alreadySet = False
         for agent in agents:
-            if random.random() < agent.IgnProb_bl:
-                agent.condition = "On Fire"
-                # print("{} started".format(agent.condition))
-                self.schedule.add(agent)
+            if not alreadySet:
+                agent.condition = 'On Fire'
+                alreadySet = True
+            self.schedule.add(agent)
+        # for agent in agents:
+        #     if random.random() < agent.IgnProb_bl:
+        #         agent.condition = "On Fire"
+        #         # print("{} started".format(agent.condition))
+        #         self.schedule.add(agent)
+        #     else:
+        #         agent.condition = "Fine"
+        #         self.schedule.add(agent)
 
     def step(self):
         """
@@ -144,7 +168,7 @@ fire.run_model()
 # plot output
 results = fire.dc.get_model_vars_dataframe()
 results.head()
-# results.plot()
+results.plot()
 
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
