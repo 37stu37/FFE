@@ -33,3 +33,17 @@ gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox
 fig, ax = plt.subplots(1, 1)
 gdf_buildings.plot(column='IgnProb_bl', ax=ax, legend=True)
 
+
+class Agent(GeoAgent):
+    def __init__(self, unique_id, model, shape):
+        super().__init__(unique_id, model, shape)
+
+
+class GeoModel(Model):
+    def __init__(self):
+        self.grid = GeoSpace()
+
+        state_agent_kwargs = dict(model=self)
+        AC = AgentCreator(agent_class=Agent, agent_kwargs=state_agent_kwargs)
+        agents = AC.from_GeoDataFrame(gdf_buildings, unique_id="TARGET_FID")
+        self.grid.add_agents(agents)
