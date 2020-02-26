@@ -44,7 +44,7 @@ bbox = box(minx, miny, maxx, maxy)
 
 gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
 # gdf_buildings.plot()
-gdf_buildings['IgnProb_bl'] = 0.1
+gdf_buildings['IgnProb_bl'] = 0.5
 
 # plot map of agents
 fig, ax = plt.subplots(1, 1)
@@ -77,8 +77,8 @@ class Buildings(GeoAgent):
     @property
     def count_neighbors_on_fire(self):
         neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-        neighbors_fire = [n for n in neighbors if n.condition == "On Fire" and n.unique_id != self.unique_id]
-        print('{} got {} fine neighbor(s)'.format(self.unique_id, len(neighbors_fire)))
+        neighbors_fire = [n for n in neighbors] # if n.condition == "On Fire"]# and n.unique_id != self.unique_id]
+        print('{} got {} fire neighbor(s)'.format(self.unique_id, len(neighbors_fire)))
         return len(neighbors_fire)
 
     def spread_fire(self, count_neighbors):
@@ -87,7 +87,6 @@ class Buildings(GeoAgent):
         if self.condition == "Fine" and count_neighbors != 0:
             self.condition = "On Fire"
         print('agent: {} condition: {}'.format(self.unique_id, self.condition))
-
 
     def step(self):
         '''
@@ -118,8 +117,10 @@ class WellyFire(Model):
         for agent in agents:
             if random.random() < agent.IgnProb_bl:
                 agent.condition = "On Fire"
+                print ("building on fire: {}".format(agent.unique_id))
             else:
                 agent.condition = "Fine"
+
             self.schedule.add(agent)
 
     def step(self):
@@ -152,6 +153,7 @@ class WellyFire(Model):
 # Run model
 fire = WellyFire()
 fire.run_model()
+
 # plot output
 results = fire.dc.get_model_vars_dataframe()
 results.head()
