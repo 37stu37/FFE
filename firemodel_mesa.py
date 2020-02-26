@@ -77,8 +77,8 @@ class Buildings(GeoAgent):
     @property
     def count_neighbors_on_fire(self):
         neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-        neighbors_fire = [n for n in neighbors] # if n.condition == "On Fire"]# and n.unique_id != self.unique_id]
-        print('{} got {} fire neighbor(s)'.format(self.unique_id, len(neighbors_fire)))
+        neighbors_fire = [n for n in neighbors] # if n.condition == "On Fire"]# and n.unique_id != self.unique_id] ### Doesn't see the neighbors on fire !!!
+        # print('{} got {} fire neighbor(s)'.format(self.unique_id, len(neighbors_fire)))
         return len(neighbors_fire)
 
     def spread_fire(self, count_neighbors):
@@ -86,13 +86,13 @@ class Buildings(GeoAgent):
             self.condition = "Burned Out"
         if self.condition == "Fine" and count_neighbors != 0:
             self.condition = "On Fire"
-        print('agent: {} condition: {}'.format(self.unique_id, self.condition))
+        # print('agent: {} condition: {}'.format(self.unique_id, self.condition))
 
     def step(self):
         '''
         if building is on fire, spread it to buildings according to wind conditions
         '''
-        print("STEP AGENT")
+        # print("STEP AGENT")
         neighbor_fires = self.count_neighbors_on_fire
         self.spread_fire(neighbor_fires)
 
@@ -117,9 +117,11 @@ class WellyFire(Model):
         for agent in agents:
             if random.random() < agent.IgnProb_bl:
                 agent.condition = "On Fire"
+                # self.schedule.add(agent)
                 print ("building on fire: {}".format(agent.unique_id))
             else:
                 agent.condition = "Fine"
+                # self.schedule.add(agent)
 
             self.schedule.add(agent)
 
@@ -128,12 +130,12 @@ class WellyFire(Model):
         Advance the model by one step.
         if no building on Fire, stop the model
         """
-
+        # collect data
+        self.dc.collect(self)
         # step in time
         print("STEP MODEL")
         self.schedule.step()
-        # collect data
-        self.dc.collect(self)
+
         # Halt if no more fire
         if self.count_type(self, "On Fire") == 0:
             self.running = False
