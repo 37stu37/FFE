@@ -77,7 +77,7 @@ class Buildings(GeoAgent):
     @property
     def count_neighbors_on_fire(self):
         neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-        neighbors_fire = [n for n in neighbors] # if n.condition == "On Fire"]# and n.unique_id != self.unique_id] ### Doesn't see the neighbors on fire !!!
+        neighbors_fire = [n for n in neighbors] # if n.condition == "On Fire"]# and n.unique_id != self.unique_id] # Doesn't see the neighbors on fire !!!
         # print('{} got {} fire neighbor(s)'.format(self.unique_id, len(neighbors_fire)))
         return len(neighbors_fire)
 
