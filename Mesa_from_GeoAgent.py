@@ -32,6 +32,7 @@ bbox = box(minx, miny, maxx, maxy)
 # building point dataset
 gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw_pts.shp"), bbox=bbox)
 xmin,ymin,xmax,ymax = gdf_buildings.total_bounds
+position = np.add
 # grid proportion
 height = math.ceil(ymax-ymin)
 width = math.ceil(xmax-xmin)
@@ -50,6 +51,7 @@ direction, distance = wind_scenario()
 # plot map of agents
 fig, ax = plt.subplots(1, 1)
 gdf_buildings.plot(column='IgnProb_bl', ax=ax, legend=True)
+gdf_buildings['pos'] = tuple(zip(gdf_buildings.X, gdf_buildings.Y))
 
 # counting set up
 # def state_count(model):
@@ -62,11 +64,10 @@ gdf_buildings.plot(column='IgnProb_bl', ax=ax, legend=True)
 # ABM Model
 
 class Building(Agent):
-    def __init__(self, model, init_state="Fine"):
-        super().__init__(model)
+    def __init__(self, pos, model, init_state="Fine"):
+        super().__init__(pos, model)
         self.ignition = gdf_buildings.IgnProb_bl
-        self.X = math.ceil(xmax - gdf_buildings.X)
-        self.Y = math.ceil(ymax - gdf_buildings.Y)
+        self.x, self.y = pos
         self.state = init_state
         self.spread = distance
 
@@ -89,7 +90,7 @@ class Fire(Model):
 
         # def place_agents(self):
         for (contents, x, y) in self.grid.coord_iter():
-            building = Building((x, y), model)
+            building = Building(self, (x, y))
             for Xcoo, Ycoo in zip(gdf_buildings.X, gdf_buildings.Y):
                 # create building
                 if (Xcoo == x) and (Ycoo == y):
