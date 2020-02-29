@@ -34,8 +34,8 @@ from mesa.visualization.ModularVisualization import ModularServer
 # pip install mesa-geo
 # pip install PyDrive
 
-# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-path = "G:/Sync/FFE/Mesa"
+path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+# path = "G:/Sync/FFE/Mesa"
 
 # crop data
 minx, miny = 1748570, 5426959
