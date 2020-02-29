@@ -44,7 +44,7 @@ bbox = box(minx, miny, maxx, maxy)
 
 gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
 # gdf_buildings.plot()
-gdf_buildings['IgnProb_bl'] = 0.5
+# gdf_buildings['IgnProb_bl'] = 0.5
 
 # plot map of agents
 fig, ax = plt.subplots(1, 1)
@@ -115,13 +115,14 @@ class WellyFire(Model):
         # Set up agents
         print("{} set up agents in the WellyFire".format(len(agents)))
         for agent in agents:
+            agent.condition = "Fine"
             if random.random() < agent.IgnProb_bl:
                 agent.condition = "On Fire"
                 # self.schedule.add(agent)
                 print ("building on fire: {}".format(agent.unique_id))
-            else:
-                agent.condition = "Fine"
-                # self.schedule.add(agent)
+            # else:
+            #     agent.condition = "Fine"
+            #     # self.schedule.add(agent)
 
             self.schedule.add(agent)
 
