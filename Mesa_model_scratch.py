@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+from mesa.datacollection import DataCollector
 from shapely.geometry import box
 from geopy.distance import distance
 import random
@@ -90,9 +91,9 @@ direction, fire_distance = wind_scenario()
 class ExposureAgent(GeoAgent):
     """ An agent with fixed initial wealth."""
 
-    def __init__(self, unique_id, model, shape, init_state="fine"):
+    def __init__(self, unique_id, model, shape):
         super().__init__(unique_id, model, shape)
-        self.state = init_state
+        self.state = "fine"
 
     def step(self):
         if self.state == "fire":
@@ -115,6 +116,14 @@ class FireModel(Model):
         self.schedule = RandomActivation(self)
         self.running = True
 
+        self.datacollector = DataCollector( model_reporters={"Total Burned": "Burned"}, agent_reporters={"Fine": "fine", "Fire": "fire", "Burned": "burned"})
+
+        # set agents states
+        for b in buildings:
+            if random.random() < b.IgnProb_bl:
+                b.condition = "fire"
+        self.schedule.add(buildings)
+
     def step(self):
         '''Advance the model by one step.'''
         self.schedule.step()
@@ -122,8 +131,13 @@ class FireModel(Model):
         list_state = [a.state for a in all_agents]
         if "fire" not in list_state:
             self.running = False
-        self.schedule.add(all_agents)
+        for a in all_agents:
+            self.schedule.add(a)
+        self.schedule.step()
+        self.datacollector.collect(self)
 
-# model = FireModel()
-# for i in range(5):
-#     model.step()
+
+fire = FireModel()
+fire.run_model()
+results_model = fire.datacollector.get_model_vars_dataframe()
+results_agents = fire.datacollector.get_agent_vars_dataframe()
