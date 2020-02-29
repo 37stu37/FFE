@@ -115,14 +115,21 @@ class FireModel(Model):
         self.grid.add_agents(buildings)
         self.schedule = RandomActivation(self)
         self.running = True
+        self.grid.add_agents(buildings)
 
         self.datacollector = DataCollector( model_reporters={"Total Burned": "Burned"}, agent_reporters={"Fine": "fine", "Fire": "fire", "Burned": "burned"})
 
-        # set agents states
+        # Set up agents
         for b in buildings:
             if random.random() < b.IgnProb_bl:
-                b.condition = "fire"
-        self.schedule.add(buildings)
+                b.condition = "On Fire"
+                # self.schedule.add(agent)
+                print("building on fire: {}".format(b.unique_id))
+            else:
+                b.condition = "Fine"
+                # self.schedule.add(agent)
+
+            self.schedule.add(b)
 
     def step(self):
         '''Advance the model by one step.'''
