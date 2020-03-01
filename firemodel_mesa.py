@@ -44,7 +44,7 @@ bbox = box(minx, miny, maxx, maxy)
 
 gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
 # gdf_buildings.plot()
-# gdf_buildings['IgnProb_bl'] = 0.5
+gdf_buildings['IgnProb_bl'] = 0.3
 
 # plot map of agents
 fig, ax = plt.subplots(1, 1)
@@ -74,19 +74,6 @@ class Buildings(GeoAgent):
         self.direction = wind_direction
         self.distance = critical_distance
 
-    # @property
-    # def count_neighbors_on_fire(self):
-    #     neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-    #     neighbors_fire = [n for n in neighbors] # if n.condition == "On Fire"]# and n.unique_id != self.unique_id] # Doesn't see the neighbors on fire !!!
-    #     # print('{} got {} fire neighbor(s)'.format(self.unique_id, len(neighbors_fire)))
-    #     return len(neighbors_fire)
-    #
-    # def spread_fire(self, count_neighbors):
-    #     if self.condition == "On Fire":
-    #         self.condition = "Burned Out"
-    #     if self.condition == "Fine" and count_neighbors != 0:
-    #         self.condition = "On Fire"
-    #     # print('agent: {} condition: {}'.format(self.unique_id, self.condition))
 
     def step(self):
         '''
@@ -95,7 +82,7 @@ class Buildings(GeoAgent):
         other_agents = self.model.schedule.agents
         if self.condition == "On Fire":
             for agent in other_agents:
-                if self.distance < self.model.grid.get_distance(self, self, agent):
+                if self.distance < self.model.grid.distance(self, agent):
                     agent.condition = "On Fire"
             self.condition = "Burned Out"
 
