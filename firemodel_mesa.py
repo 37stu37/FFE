@@ -44,7 +44,7 @@ bbox = box(minx, miny, maxx, maxy)
 
 gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
 # gdf_buildings.plot()
-gdf_buildings['IgnProb_bl'] = 0.3
+gdf_buildings['IgnProb_bl'] = 0
 
 # plot map of agents
 fig, ax = plt.subplots(1, 1)
@@ -79,13 +79,20 @@ class Buildings(GeoAgent):
         '''
         if building is on fire, spread it to buildings according to wind conditions
         '''
-        other_agents = self.model.schedule.agents
+        neighbors = self.model.grid.get_neighbors_within_distance(agent=self, center=False, distance=self.distance)
         if self.condition == "On Fire":
-            for agent in other_agents:
-                if self.distance < self.model.grid.distance(self, agent):
-                    agent.condition = "On Fire"
+            for n in neighbors:
+                if n.condition == "Fine":
+                    n.condition = "On Fire"
             self.condition = "Burned Out"
 
+
+        # other_agents = self.model.schedule.agents
+        # if self.condition == "On Fire":
+        #     for agent in other_agents:
+        #         if self.distance < self.model.grid.distance(self, agent):
+        #             agent.condition = "On Fire"
+        #     self.condition = "Burned Out"
 
 class WellyFire(Model):
     def __init__(self):
@@ -144,13 +151,13 @@ class WellyFire(Model):
 
 
 # Run model
-fire = WellyFire()
-fire.run_model()
-
-# plot output
-results = fire.dc.get_model_vars_dataframe()
-results.head()
-results.plot()
+# fire = WellyFire()
+# fire.run_model()
+#
+# # plot output
+# results = fire.dc.get_model_vars_dataframe()
+# results.head()
+# results.plot()
 
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
