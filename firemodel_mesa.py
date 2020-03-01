@@ -92,14 +92,12 @@ class Buildings(GeoAgent):
         '''
         if building is on fire, spread it to buildings according to wind conditions
         '''
+        other_agents = self.model.schedule.agents
         if self.condition == "On Fire":
-            neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-            for neighbor in neighbors:
-                print("neighbor: {}, neighbor condition: {}". format(neighbor.unique_id, neighbor.condition))
-                if neighbor.condition == "Fine":
-                    neighbor.condition = "On Fire"
+            for agent in other_agents:
+                if self.distance < self.model.grid.get_distance(self, self, agent):
+                    agent.condition = "On Fire"
             self.condition = "Burned Out"
-            self.model.schedule.agents =
 
 
 class WellyFire(Model):
