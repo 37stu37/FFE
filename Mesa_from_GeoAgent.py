@@ -77,26 +77,6 @@ def count_fire(model):
 
 
 # ABM Model
-fine = 0
-fire = 1
-burned = 2
-
-
-class Building(GeoAgent):
-    def __init__(self, unique_id, model, shape, init_state=fine):
-        super().__init__(unique_id, model, shape)
-        self.shape = shape
-        self.state = init_state
-        self.spread = distance
-
-    def step(self):
-        if self.state == fire:
-            # propagate fire
-            for neighbor in self.model.grid.get_neighbors(self, moore=True, radius=distance):
-                if neighbor.state == fine:
-                    neighbor.state = fire
-            self.state = burned
-
 
 class Fire(Model):
     def __init__(self):
@@ -127,6 +107,22 @@ class Fire(Model):
         self.dc.collect(self)
         if self.count_fire == 0:
             self.running = False
+
+
+class Building(GeoAgent):
+    def __init__(self, unique_id, model, shape, init_state=fine):
+        super().__init__(unique_id, model, shape)
+        self.shape = shape
+        self.state = init_state
+        self.spread = distance
+
+    def step(self):
+        if self.state == fire:
+            # propagate fire
+            for neighbor in self.model.grid.get_neighbors(self, moore=True, radius=distance):
+                if neighbor.state == fine:
+                    neighbor.state = fire
+            self.state = burned
 
 
 # plot results

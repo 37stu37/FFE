@@ -117,7 +117,7 @@ class FireModel(Model):
         self.running = True
         self.grid.add_agents(buildings)
 
-        self.datacollector = DataCollector( model_reporters={"Total Burned": "Burned"}, agent_reporters={"Fine": "fine", "Fire": "fire", "Burned": "burned"})
+        self.datacollector = DataCollector( model_reporters={"Total Burned": "Burned"})#, agent_reporters={"Fine": "fine", "Fire": "fire", "Burned": "burned"})
 
         # Set up agents
         for b in buildings:
