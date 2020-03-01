@@ -34,8 +34,8 @@ from mesa.visualization.ModularVisualization import ModularServer
 # pip install mesa-geo
 # pip install PyDrive
 
-path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-# path = "G:/Sync/FFE/Mesa"
+# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+path = "G:/Sync/FFE/Mesa"
 
 # crop data
 minx, miny = 1748570, 5426959
@@ -44,7 +44,7 @@ bbox = box(minx, miny, maxx, maxy)
 
 gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
 # gdf_buildings.plot()
-gdf_buildings['IgnProb_bl'] = 0.5
+gdf_buildings['IgnProb_bl'] = 0.1
 
 # plot map of agents
 fig, ax = plt.subplots(1, 1)
@@ -74,7 +74,6 @@ class Buildings(GeoAgent):
         self.direction = wind_direction
         self.distance = critical_distance
 
-
     def step(self):
         '''
         if building is on fire, spread it to buildings according to wind conditions
@@ -86,13 +85,13 @@ class Buildings(GeoAgent):
         #             n.condition = "On Fire"
         #     self.condition = "Burned Out"
 
-
         other_agents = self.model.schedule.agents
-        if self.condition == "On Fire":
+        if self.condition == "Fine":
             for agent in other_agents:
                 if self.distance < self.model.grid.distance(self, agent):
-                    agent.condition = "On Fire"
-            self.condition = "Burned Out"
+                    if agent.condition == "On Fire":
+                        self.condition = "On Fire"
+
 
 class WellyFire(Model):
     def __init__(self):
@@ -116,7 +115,7 @@ class WellyFire(Model):
             if random.random() < agent.IgnProb_bl:
                 agent.condition = "On Fire"
                 # self.schedule.add(agent)
-                print ("building on fire: {}".format(agent.unique_id))
+                print("building on fire: {}".format(agent.unique_id))
             # else:
             #     agent.condition = "Fine"
             #     # self.schedule.add(agent)
@@ -128,15 +127,23 @@ class WellyFire(Model):
         Advance the model by one step.
         if no building on Fire, stop the model
         """
+        # collect data
+        self.dc.collect(self)
         # step in time
         print("STEP MODEL")
         self.schedule.step()
-        # collect data
-        self.dc.collect(self)
+
 
         # Halt if no more fire
         if self.count_type(self, "On Fire") == 0:
             self.running = False
+
+        all_agents = self.schedule.agents
+        for agent in all_agents:
+            if agent.condition == "On Fire":
+                agent.condition = "Burned Out"
+
+
 
     @staticmethod
     def count_type(model, agent_condition):
@@ -161,4 +168,3 @@ results.plot()
 
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
-
