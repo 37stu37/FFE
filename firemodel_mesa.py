@@ -8,17 +8,12 @@ Original file is located at
 """
 
 import os
-import sys
 import matplotlib.pyplot as plt
-from osgeo import gdal_array
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-import shapely
 from shapely.geometry import box
 import random
-from PIL import Image
-from matplotlib.pyplot import imshow
 from mesa import Model, Agent
 from mesa.time import RandomActivation
 from mesa.space import Grid
@@ -28,11 +23,6 @@ from mesa_geo import GeoSpace, GeoAgent, AgentCreator
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
 
-# pip install Pillow
-# pip install descartes
-# conda install fiona pyproj rtree shapely
-# pip install mesa-geo
-# pip install PyDrive
 
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
 path = "G:/Sync/FFE/Mesa"
@@ -78,19 +68,22 @@ class Buildings(GeoAgent):
         '''
         if building is on fire, spread it to buildings according to wind conditions
         '''
-        # neighbors = self.model.grid.get_neighbors_within_distance(self, center=False, distance=self.distance)
-        # if self.condition == "On Fire":
-        #     for n in neighbors:
-        #         if n.condition == "Fine":
-        #             n.condition = "On Fire"
-        #     self.condition = "Burned Out"
+        # option 1
+        # print("STEP AGENT")
+        neighbors = self.model.grid.get_neighbors_within_distance(self, center=False, distance=self.distance)
+        if self.condition == "On Fire":
+            for n in neighbors:
+                if n.condition == "Fine":
+                    n.condition = "On Fire"
+            self.condition = "Burned Out"
 
-        other_agents = self.model.schedule.agents
-        if self.condition == "Fine":
-            for agent in other_agents:
-                if self.distance < self.model.grid.distance(self, agent):
-                    if agent.condition == "On Fire":
-                        self.condition = "On Fire"
+        # option 2
+        # other_agents = self.model.schedule.agents
+        # if self.condition == "Fine":
+        #     for agent in other_agents:
+        #         if self.distance < self.model.grid.distance(self, agent):
+        #             if agent.condition == "On Fire":
+        #                 self.condition = "On Fire"
 
 
 class WellyFire(Model):
@@ -101,7 +94,6 @@ class WellyFire(Model):
         buildings_agent_kwargs = dict(model=self)
         ac = AgentCreator(agent_class=Buildings, agent_kwargs=buildings_agent_kwargs)
         agents = ac.from_GeoDataFrame(gdf_buildings, unique_id="TARGET_FID")
-        print("{} in the WellyFire".format(len(agents)))
         self.grid.add_agents(agents)
         self.dc = DataCollector({"Fine": lambda m: self.count_type(m, "Fine"),
                                  "On Fire": lambda m: self.count_type(m, "On Fire"),
@@ -109,16 +101,12 @@ class WellyFire(Model):
         self.running = True
 
         # Set up agents
-        print("{} set up agents in the WellyFire".format(len(agents)))
+        print("{} agents set up in the WellyFire".format(len(agents)))
         for agent in agents:
             agent.condition = "Fine"
             if random.random() < agent.IgnProb_bl:
                 agent.condition = "On Fire"
-                # self.schedule.add(agent)
                 print("building on fire: {}".format(agent.unique_id))
-            # else:
-            #     agent.condition = "Fine"
-            #     # self.schedule.add(agent)
 
             self.schedule.add(agent)
 
@@ -137,12 +125,6 @@ class WellyFire(Model):
         # Halt if no more fire
         if self.count_type(self, "On Fire") == 0:
             self.running = False
-
-        all_agents = self.schedule.agents
-        for agent in all_agents:
-            if agent.condition == "On Fire":
-                agent.condition = "Burned Out"
-
 
 
     @staticmethod
@@ -166,5 +148,3 @@ results = fire.dc.get_model_vars_dataframe()
 results.head()
 results.plot()
 
-from mesa.visualization.modules import CanvasGrid
-from mesa.visualization.ModularVisualization import ModularServer
