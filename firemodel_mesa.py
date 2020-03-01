@@ -74,27 +74,32 @@ class Buildings(GeoAgent):
         self.direction = wind_direction
         self.distance = critical_distance
 
-    @property
-    def count_neighbors_on_fire(self):
-        neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
-        neighbors_fire = [n for n in neighbors] # if n.condition == "On Fire"]# and n.unique_id != self.unique_id] # Doesn't see the neighbors on fire !!!
-        # print('{} got {} fire neighbor(s)'.format(self.unique_id, len(neighbors_fire)))
-        return len(neighbors_fire)
-
-    def spread_fire(self, count_neighbors):
-        if self.condition == "On Fire":
-            self.condition = "Burned Out"
-        if self.condition == "Fine" and count_neighbors != 0:
-            self.condition = "On Fire"
-        # print('agent: {} condition: {}'.format(self.unique_id, self.condition))
+    # @property
+    # def count_neighbors_on_fire(self):
+    #     neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
+    #     neighbors_fire = [n for n in neighbors] # if n.condition == "On Fire"]# and n.unique_id != self.unique_id] # Doesn't see the neighbors on fire !!!
+    #     # print('{} got {} fire neighbor(s)'.format(self.unique_id, len(neighbors_fire)))
+    #     return len(neighbors_fire)
+    #
+    # def spread_fire(self, count_neighbors):
+    #     if self.condition == "On Fire":
+    #         self.condition = "Burned Out"
+    #     if self.condition == "Fine" and count_neighbors != 0:
+    #         self.condition = "On Fire"
+    #     # print('agent: {} condition: {}'.format(self.unique_id, self.condition))
 
     def step(self):
         '''
         if building is on fire, spread it to buildings according to wind conditions
         '''
-        # print("STEP AGENT")
-        neighbor_fires = self.count_neighbors_on_fire
-        self.spread_fire(neighbor_fires)
+        if self.condition == "On Fire":
+            neighbors = self.model.grid.get_neighbors_within_distance(self, distance=self.distance, center=False)
+            for neighbor in neighbors:
+                print("neighbor: {}, neighbor condition: {}". format(neighbor.unique_id, neighbor.condition))
+                if neighbor.condition == "Fine":
+                    neighbor.condition = "On Fire"
+            self.condition = "Burned Out"
+            self.model.schedule.agents =
 
 
 class WellyFire(Model):
