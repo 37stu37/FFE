@@ -54,8 +54,23 @@ def plot(df, column_df):
 
 
 def build_edge_list(geodataframe, maximum_distance):
+    n = np.arange(0, len(gdf))
+    target = [n] * len(gdf)
+    target = np.hstack(target)
+    source = np.repeat(n, len(gdf))
+    # put arrays in dataframe
+    df = pd.DataFrame()
+    df['source'] = source
+    df['target'] = target
+    # merge source attributes with source index
+    gdf = geodataframe.copy()
+    gdf['id'] = gdf.index
+    merge(A, B, left_on='lkey', right_on='rkey', how='outer')
+
+
+
     source = pd.DataFrame(geodataframe, copy=True)
-    # source = gdf.copy()
+    gdf = geodataframe.copy()
     source['id'] = source.index
     target = source.copy()
     source.columns = ['source_' + str(col) for col in source.columns]

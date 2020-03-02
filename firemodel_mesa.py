@@ -15,15 +15,19 @@ from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
 
 
-path = "G:/Sync/FFE/Mesa"
+# path = "G:/Sync/FFE/Mesa"
+path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
 
 # crop data
 minx, miny = 1748570, 5426959
 maxx, maxy = 1748841, 5427115
 bbox = box(minx, miny, maxx, maxy)
 
-gdf_buildings = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
-# gdf_buildings.plot()
+data = gpd.read_file(os.path.join(path, "buildings_raw.shp"), bbox=bbox)
+# Let's make a copy of our data
+gdf_buildings = data.copy()
+# Reproject the data
+gdf_buildings = gdf_buildings.to_crs(epsg=2193)
 gdf_buildings['IgnProb_bl'] = 0.1
 
 # plot map of agents
@@ -78,7 +82,7 @@ class Buildings(GeoAgent):
 
 class Fire(Model):
     def __init__(self):
-        self.grid = GeoSpace()
+        self.grid = GeoSpace(crs={"init": "epsg:2193"})
         self.schedule = RandomActivation(self)
         # agent located from shapefile
         buildings_agent_kwargs = dict(model=self)
