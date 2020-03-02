@@ -54,59 +54,39 @@ def plot(df, column_df):
 
 
 def build_edge_list(geodataframe, maximum_distance):
-    n = np.arange(0, len(gdf))
-    target = [n] * len(gdf)
+    # create arrays for different id combination
+    n = np.arange(0, len(geodataframe))
+    target = [n] * len(geodataframe)
     target = np.hstack(target)
-    source = np.repeat(n, len(gdf))
+    source = np.repeat(n, len(geodataframe))
     # put arrays in dataframe
     df = pd.DataFrame()
-    df['id'] = df.index
-    df['source_idx'] = source
-    df['target_idx'] = target
+    df['source_id'] = source
+    df['target_id'] = target
     # merge source attributes with source index
-    gdf = geodataframe.copy()
-    gdf['id'] = gdf.index
+    geo_df = geodataframe.copy()
+    geo_df['id'] = geo_df.index
     # create source / target gdf from gdf.columns of interest
-    gdf = gdf[['TARGET_FID','X', 'Y', 'LON', 'LAT', 'geometry', 'IgnProb_bl']]
-    gdf_TRG = gdf.copy()
-    gdf_TRG.columns = ['target_' + str(col) for col in target.columns]
-    gdf_SRC = gdf.copy()
-    gdf_SRC.columns = ['source_' + str(col) for col in source.columns]
+    geo_df = geo_df[['id', 'TARGET_FID', 'X', 'Y', 'LON', 'LAT', 'geometry', 'IgnProb_bl']]
+    geo_df_TRG = geo_df.copy()
+    geo_df_TRG.columns = ['target_' + str(col) for col in geo_df_TRG.columns]
+    geo_df_SRC = geo_df.copy()
+    geo_df_SRC.columns = ['source_' + str(col) for col in geo_df_SRC.columns]
     # merge data
-    merged_data = pd.merge(df, gdf, left_on='id', right_on='source_idx', how='outer', suffixes=('', '_SRC'))
-    merged_data = pd.merge(merged_data, gdf, left_on='id', right_on='target_idx', how='outer', suffixes=('', '_TRG'))
+    merged_data = pd.merge(df, geo_df_SRC, left_on='source_id', right_on='source_id', how='outer')
+    merged_data = pd.merge(merged_data, geo_df_TRG, left_on='target_id', right_on='target_id', how='outer')
+    merged_data.rename(columns={'source_id': 'source', 'target_id': 'target'}, inplace=True)
     # calculate distance for each source / target pair
-    merged_data['distance'] =
+    merged_data['v1'] = merged_data.source_X - merged_data.target_X
+    merged_data['v2'] = merged_data.source_Y - merged_data.target_Y
+    merged_data['euc_distance'] = np.hypot(merged_data.v1, merged_data.v2)
+    # remove when distance "illegal"
+    valid_distance = merged_data['euc_distance'] < maximum_distance
+    not_same_node = merged_data['euc_distance'] != 0
+    data = merged_data[valid_distance & not_same_node]
+    return data
 
-
-    source = pd.DataFrame(geodataframe, copy=True)
-    gdf = geodataframe.copy()
-    source['id'] = source.index
-    target = source.copy()
-    source.columns = ['source_' + str(col) for col in source.columns]
-    target.columns = ['target_' + str(col) for col in target.columns]
-    source.rename(columns={'source_id': 'source'}, inplace=True)
-    target.rename(columns={'target_id': 'target'}, inplace=True)
-    source = source[
-        ['source_IgnProb_bl', 'source_X', 'source_Y', 'source_LON', 'source_LAT', 'source_geometry', 'source']]
-    target = target[
-        ['target_IgnProb_bl', 'target_X', 'target_Y', 'target_LON', 'target_LAT', 'target_geometry', 'target']]
-    list_of_dataframes = []
-
-    target_copy = target.copy()
-    for i in source.index:
-        for c in source.columns:
-            target_copy[c] = source[c][i]
-            # calculate distance and filter
-            # join['Vx'] = join.source_X - join.target_X
-            # join['Vy'] = join.source_Y - join.target_Y
-            # join['distance'] = eudistance(join.Vx, join.Vy)
-            # join = join[(join.distance < maximum_distance) & (join.distance != 0)]
-            list_of_dataframes.append(target_copy)
-            target_copy = target.copy()
-
-    concat_df = pd.concat(list_of_dataframes)
-    return concat_df
+def create_network(edge_list):
 
 
 gdf = load_data("buildings_raw_pts.shp")
