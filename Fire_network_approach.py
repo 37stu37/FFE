@@ -60,13 +60,23 @@ def build_edge_list(geodataframe, maximum_distance):
     source = np.repeat(n, len(gdf))
     # put arrays in dataframe
     df = pd.DataFrame()
-    df['source'] = source
-    df['target'] = target
+    df['id'] = df.index
+    df['source_idx'] = source
+    df['target_idx'] = target
     # merge source attributes with source index
     gdf = geodataframe.copy()
     gdf['id'] = gdf.index
-    merge(A, B, left_on='lkey', right_on='rkey', how='outer')
-
+    # create source / target gdf from gdf.columns of interest
+    gdf = gdf[['TARGET_FID','X', 'Y', 'LON', 'LAT', 'geometry', 'IgnProb_bl']]
+    gdf_TRG = gdf.copy()
+    gdf_TRG.columns = ['target_' + str(col) for col in target.columns]
+    gdf_SRC = gdf.copy()
+    gdf_SRC.columns = ['source_' + str(col) for col in source.columns]
+    # merge data
+    merged_data = pd.merge(df, gdf, left_on='id', right_on='source_idx', how='outer', suffixes=('', '_SRC'))
+    merged_data = pd.merge(merged_data, gdf, left_on='id', right_on='target_idx', how='outer', suffixes=('', '_TRG'))
+    # calculate distance for each source / target pair
+    merged_data['distance'] =
 
 
     source = pd.DataFrame(geodataframe, copy=True)
