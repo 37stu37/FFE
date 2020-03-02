@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import box
+from pyproj import Geod
 import random
 from mesa import Model, Agent
 from mesa.time import RandomActivation
@@ -15,8 +16,8 @@ from mesa_geo import GeoSpace, GeoAgent, AgentCreator
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
 
-path = "G:/Sync/FFE/Mesa"
-
+# path = "G:/Sync/FFE/Mesa"
+path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
 
 def load_data(file_name):
     # crop data
@@ -38,10 +39,12 @@ def wind_scenario():
     return w, d
 
 
-def calculate_distance(point1, point2):
-    # need geometry from geopandas
-    d = point1.distance(point2)
-    return d
+# def calculate_distance(point1, point2):
+#     # need geometry from geopandas
+#     d = point1.distance(point2)
+#     return d
+def eudistance(v1, v2):
+    return np.linalg.norm(v1 - v2)
 
 
 def plot(df, column_df):
@@ -50,8 +53,8 @@ def plot(df, column_df):
     plt.show()
 
 
-def build_edge_list(gdf=None):
-    source = pd.DataFrame(gdf, copy=True)
+def build_edge_list(geodataframe, maximum_distance):
+    source = pd.DataFrame(geodataframe, copy=True)
     # source = gdf.copy()
     source['id'] = source.index
     target = source.copy()
@@ -64,23 +67,22 @@ def build_edge_list(gdf=None):
     target = target[
         ['target_IgnProb_bl', 'target_X', 'target_Y', 'target_LON', 'target_LAT', 'target_geometry', 'target']]
     list_of_dataframes = []
-    tmp = target.copy()
-    for index, row in source.iterrows():
 
-
-
+    target_copy = target.copy()
     for i in source.index:
         for c in source.columns:
-            n = source.columns.get_loc(c)
-            tmp[c] = source.iloc[i][n]
-            # print(tmp.head(10))
-            # tmp['distance'] = np.sqrt(((source.source_X - target.target_X) ** 2) + ((source.source_Y - target.target_Y) ** 2))
-            # # tmp = tmp[tmp.distance < 45]
-            list_of_dataframes.append(tmp)
-            tmp = target.copy()
-    c = pd.concat(list_of_dataframes)
-    return c, target, source
+            target_copy[c] = source[c][i]
+            # calculate distance and filter
+            # join['Vx'] = join.source_X - join.target_X
+            # join['Vy'] = join.source_Y - join.target_Y
+            # join['distance'] = eudistance(join.Vx, join.Vy)
+            # join = join[(join.distance < maximum_distance) & (join.distance != 0)]
+            list_of_dataframes.append(target_copy)
+            target_copy = target.copy()
+
+    concat_df = pd.concat(list_of_dataframes)
+    return concat_df
 
 
 gdf = load_data("buildings_raw_pts.shp")
-edge, target, source = build_edge_list(gdf)
+edge_list = build_edge_list(gdf, 45)
