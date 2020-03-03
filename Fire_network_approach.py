@@ -87,12 +87,16 @@ def build_edge_list(geodataframe, maximum_distance):
     data = merged_data[valid_distance & not_same_node]
     return data
 
+
 def create_network(edge_list_dataframe):
     G = nx.from_pandas_edgelist(edge_list_dataframe)
-    nx.draw(G, with_labels=True, font_weight='bold')
-    # plt.show()
+    options = {'node_color': 'red', 'node_size': 100, 'width': 1, 'alpha': 0.7,
+               'with_labels': True, 'font_weight': 'bold'}
+    nx.draw_kamada_kawai(G, **options)
+    plt.show()
     return G
 
-
+# set up
 gdf = load_data("buildings_raw_pts.shp")
 edge_list = build_edge_list(gdf, 45)
+graph = create_network(edge_list)
