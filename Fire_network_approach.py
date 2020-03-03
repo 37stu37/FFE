@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import box
+import networkx as nx
 from pyproj import Geod
 import random
 from mesa import Model, Agent
@@ -86,7 +87,11 @@ def build_edge_list(geodataframe, maximum_distance):
     data = merged_data[valid_distance & not_same_node]
     return data
 
-def create_network(edge_list):
+def create_network(edge_list_dataframe):
+    G = nx.from_pandas_edgelist(edge_list_dataframe)
+    nx.draw(G, with_labels=True, font_weight='bold')
+    # plt.show()
+    return G
 
 
 gdf = load_data("buildings_raw_pts.shp")
