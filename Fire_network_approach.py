@@ -22,12 +22,13 @@ from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
 from mesa.space import NetworkGrid
 
-
 pd.options.mode.chained_assignment = None  # default='warn'
 
+path = "G:/Sync/FFE/Mesa"
+path_output = "G:\Sync\FFE\FireNetwork"
 
-# path = "G:/Sync/FFE/Mesa"
-path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+
+# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
 
 def load_data(file_name):
     # crop data
@@ -46,13 +47,10 @@ def wind_scenario():
     i = np.random.randint(0, wind_data.shape[0])
     w = wind_data.iloc[i, 2]
     d = wind_data.iloc[i, 1]
-    return w, d
+    b = wind_data.iloc[i, 3]
+    return w, d, b
 
 
-# def calculate_distance(point1, point2):
-#     # need geometry from geopandas
-#     d = point1.distance(point2)
-#     return d
 def eudistance(v1, v2):
     return np.linalg.norm(v1 - v2)
 
@@ -83,7 +81,7 @@ def calculate_initial_compass_bearing(pointA, pointB):
 
     x = math.sin(diffLong) * math.cos(lat2)
     y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1)
-            * math.cos(lat2) * math.cos(diffLong))
+                                           * math.cos(lat2) * math.cos(diffLong))
 
     initial_bearing = math.atan2(x, y)
 
@@ -95,8 +93,9 @@ def calculate_initial_compass_bearing(pointA, pointB):
 
     return compass_bearing
 
+
 def calculate_azimuth(x1, y1, x2, y2):
-    azimuth = math.degrees(math.atan2((x2-x1),(y2-y1)))
+    azimuth = math.degrees(math.atan2((x2 - x1), (y2 - y1)))
     return 360 + azimuth
 
 
@@ -139,37 +138,75 @@ def build_edge_list(geodataframe, maximum_distance):
     data = merged_data[valid_distance & not_same_node]
     # calculate azimuth
     data['azimuth'] = np.degrees(np.arctan2(merged_data['v2'], merged_data['v1']))
+    data['bearing'] = (data.azimuth + 360) % 360
     return data
 
 
 def create_network(edge_list_dataframe):
-    graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=[col for col in edge_list_dataframe.columns])
+    graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=True)
     options = {'node_color': 'red', 'node_size': 100, 'width': 1, 'alpha': 0.7,
                'with_labels': True, 'font_weight': 'bold'}
     nx.draw_kamada_kawai(graph, **options)
     plt.show()
     return graph
 
+
 # set up
 gdf = load_data("buildings_raw_pts.shp")
-edge_list = build_edge_list(gdf, 45)
-G = create_network(edge_list)
+plot(gdf, gdf.IgnProb_bl)
+edges = build_edge_list(gdf, 45)
+G = create_network(edges)
 
-# note for myself: to get attributes from the graph
-# for node1, node2, data in graph.edges(data=True):
-# ...     print(data['attribute'])
 
 # run model
-def set_initial_fire(df):
+# w_speed, w_direction = wind_scenario()
+
+# run model
+def set_initial_fire_to(df):
     """Fine = 0, Fire = 1, Burned = 2"""
     df['state'] = 0
     df['RNG'] = np.random.uniform(0, 1, df.shape[0])
     df['onFire'] = df['source_IgnProb_bl'] < df['RNG']
     df['state'] = df['onFire'].apply(lambda x: 1 if x == True else 0)
-    return df[['source', 'target', 'euc_distance', 'state', ]]
+    ignitions = df[df.state == 1]
+    if ignitions.empty:
+        print('No ignition!')
+        return
+    # source nodes ignited
+    return ignitions
 
-# def fire_spreading(df, ignition_state, wind_speed, wind_direction)
-#     df[df['A'].isin([3, 6])]
+
+def fire_spreading(df, wind_speed, wind_bearing, suppression_threshold, step=None, fire_df=None):
+    if fire_df.empty:
+        print('No Fire!')
+        return
+    # set up factor for fire spreading
+    # suppression
+    df['suppression'] = np.random.uniform(0, 1)
+    are_not_suppressed = df['suppression'] < suppression_threshold
+    # neighbors
+    are_neighbors = df['euc_distance'] < wind_speed
+    # wind
+    wind_bearing_max = wind_bearing + 45
+    wind_bearing_min = wind_bearing - 45
+    if wind_bearing == 360:
+        wind_bearing_max = 45
+    if wind_bearing == 999:
+        wind_bearing_max = 999
+        wind_bearing_min = -999
+    under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
+    # spread fire based on condition
+    fire = df[are_neighbors & under_the_wind & are_not_suppressed]
+    fire.to_csv(os.path.join(path_output, "fire_step{}.csv".format(step)))
+    return fire
 
 
-
+for scenario in range():
+    step = 0
+    ini_fire = set_initial_fire_to(edges)
+    w_speed, w_direction, w_bearing = wind_scenario()
+    fire = fire_spreading(ini_fire, w_speed, w_bearing, 0.1, step)
+    for step in range(len(edges)):
+        fire = fire_spreading(fire, w_speed, w_bearing, 0.1, step)
+        if fire.empty:
+            break
