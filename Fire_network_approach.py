@@ -1,11 +1,15 @@
 import math
 import os
+from enum import Enum
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+import pyproj
 from shapely.geometry import box
 import networkx as nx
+# from time
 from pyproj import Geod
 import random
 from mesa import Model, Agent
@@ -16,6 +20,11 @@ from mesa.batchrunner import BatchRunner
 from mesa_geo import GeoSpace, GeoAgent, AgentCreator
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
+from mesa.space import NetworkGrid
+
+
+pd.options.mode.chained_assignment = None  # default='warn'
+
 
 # path = "G:/Sync/FFE/Mesa"
 path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
@@ -46,6 +55,49 @@ def wind_scenario():
 #     return d
 def eudistance(v1, v2):
     return np.linalg.norm(v1 - v2)
+
+
+def calculate_initial_compass_bearing(pointA, pointB):
+    """
+    Calculates the bearing between two points.
+    The formulae used is the following:
+        θ = atan2(sin(Δlong).cos(lat2),
+                  cos(lat1).sin(lat2) − sin(lat1).cos(lat2).cos(Δlong))
+    :Parameters:
+      - `pointA: The tuple representing the latitude/longitude for the
+        first point. Latitude and longitude must be in decimal degrees
+      - `pointB: The tuple representing the latitude/longitude for the
+        second point. Latitude and longitude must be in decimal degrees
+    :Returns:
+      The bearing in degrees
+    :Returns Type:
+      float
+    """
+    if (type(pointA) != tuple) or (type(pointB) != tuple):
+        raise TypeError("Only tuples are supported as arguments")
+
+    lat1 = math.radians(pointA[0])
+    lat2 = math.radians(pointB[0])
+
+    diffLong = math.radians(pointB[1] - pointA[1])
+
+    x = math.sin(diffLong) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1)
+            * math.cos(lat2) * math.cos(diffLong))
+
+    initial_bearing = math.atan2(x, y)
+
+    # Now we have the initial bearing but math.atan2 return values
+    # from -180° to + 180° which is not what we want for a compass bearing
+    # The solution is to normalize the initial bearing as shown below
+    initial_bearing = math.degrees(initial_bearing)
+    compass_bearing = (initial_bearing + 360) % 360
+
+    return compass_bearing
+
+def calculate_azimuth(x1, y1, x2, y2):
+    azimuth = math.degrees(math.atan2((x2-x1),(y2-y1)))
+    return 360 + azimuth
 
 
 def plot(df, column_df):
@@ -85,18 +137,39 @@ def build_edge_list(geodataframe, maximum_distance):
     valid_distance = merged_data['euc_distance'] < maximum_distance
     not_same_node = merged_data['euc_distance'] != 0
     data = merged_data[valid_distance & not_same_node]
+    # calculate azimuth
+    data['azimuth'] = np.degrees(np.arctan2(merged_data['v2'], merged_data['v1']))
     return data
 
 
 def create_network(edge_list_dataframe):
-    G = nx.from_pandas_edgelist(edge_list_dataframe)
+    graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=[col for col in edge_list_dataframe.columns])
     options = {'node_color': 'red', 'node_size': 100, 'width': 1, 'alpha': 0.7,
                'with_labels': True, 'font_weight': 'bold'}
-    nx.draw_kamada_kawai(G, **options)
+    nx.draw_kamada_kawai(graph, **options)
     plt.show()
-    return G
+    return graph
 
 # set up
 gdf = load_data("buildings_raw_pts.shp")
 edge_list = build_edge_list(gdf, 45)
-graph = create_network(edge_list)
+G = create_network(edge_list)
+
+# note for myself: to get attributes from the graph
+# for node1, node2, data in graph.edges(data=True):
+# ...     print(data['attribute'])
+
+# run model
+def set_initial_fire(df):
+    """Fine = 0, Fire = 1, Burned = 2"""
+    df['state'] = 0
+    df['RNG'] = np.random.uniform(0, 1, df.shape[0])
+    df['onFire'] = df['source_IgnProb_bl'] < df['RNG']
+    df['state'] = df['onFire'].apply(lambda x: 1 if x == True else 0)
+    return df[['source', 'target', 'euc_distance', 'state', ]]
+
+# def fire_spreading(df, ignition_state, wind_speed, wind_direction)
+#     df[df['A'].isin([3, 6])]
+
+
+
