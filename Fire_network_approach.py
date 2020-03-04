@@ -178,7 +178,7 @@ def fire_spreading(df, wind_speed, wind_bearing, suppression_threshold, step_val
         wind_bearing_min = -999
     are_under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
     # spread fire based on condition
-    fire_df = df[are_neighbors & are_not_suppressed]#are_under_the_wind]# & are_not_suppressed] !! check ISSUE
+    fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed] # issues with "are_under_the_wind
     fire_df['step'] = step_value
     fire_df.to_csv(os.path.join(path_output, "step{}_fire.csv".format(step_value)))
     return fire_df
