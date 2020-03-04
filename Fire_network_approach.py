@@ -1,26 +1,13 @@
+import datetime
+import glob
 import math
 import os
-from enum import Enum
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-import pyproj
 from shapely.geometry import box
 import networkx as nx
-# from time
-from pyproj import Geod
-import random
-from mesa import Model, Agent
-from mesa.time import RandomActivation
-from mesa.space import Grid
-from mesa.datacollection import DataCollector
-from mesa.batchrunner import BatchRunner
-from mesa_geo import GeoSpace, GeoAgent, AgentCreator
-from mesa.visualization.modules import CanvasGrid
-from mesa.visualization.ModularVisualization import ModularServer
-from mesa.space import NetworkGrid
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -153,37 +140,32 @@ def create_network(edge_list_dataframe):
 
 # set up
 gdf = load_data("buildings_raw_pts.shp")
-plot(gdf, gdf.IgnProb_bl)
+# plot(gdf, gdf.IgnProb_bl)
 edges = build_edge_list(gdf, 45)
 G = create_network(edges)
 
 
 # run model
-# w_speed, w_direction = wind_scenario()
-
-# run model
 def set_initial_fire_to(df):
     """Fine = 0, Fire = 1, Burned = 2"""
-    df['state'] = 0
-    df['RNG'] = np.random.uniform(0, 1, df.shape[0])
-    df['onFire'] = df['source_IgnProb_bl'] < df['RNG']
-    df['state'] = df['onFire'].apply(lambda x: 1 if x == True else 0)
-    ignitions = df[df.state == 1]
-    if ignitions.empty:
-        print('No ignition!')
-        return
+    df['RNG'] = np.random.uniform(0, 1, size=len(df)) # add for random suppression per building, df.shape[0])
+    onFire = df['source_IgnProb_bl'] > df['RNG']
+    ignitions = df[onFire]
+    # if ignitions.empty:
+    #     print('No ignition!')
     # source nodes ignited
+    ignitions.to_csv(os.path.join(path_output, "ignition_scenario{}.csv".format(scenario)))
     return ignitions
 
 
-def fire_spreading(df, wind_speed, wind_bearing, suppression_threshold, step=None, fire_df=None):
-    if fire_df.empty:
+def fire_spreading(df, wind_speed, wind_bearing, suppression_threshold, step_value):
+    if df.empty:
         print('No Fire!')
-        return
+        return df
     # set up factor for fire spreading
     # suppression
-    df['suppression'] = np.random.uniform(0, 1)
-    are_not_suppressed = df['suppression'] < suppression_threshold
+    df['random'] = np.random.uniform(0, 1, size=len(df))
+    are_not_suppressed = df['random'] > suppression_threshold
     # neighbors
     are_neighbors = df['euc_distance'] < wind_speed
     # wind
@@ -194,19 +176,61 @@ def fire_spreading(df, wind_speed, wind_bearing, suppression_threshold, step=Non
     if wind_bearing == 999:
         wind_bearing_max = 999
         wind_bearing_min = -999
-    under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
+    are_under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
     # spread fire based on condition
-    fire = df[are_neighbors & under_the_wind & are_not_suppressed]
-    fire.to_csv(os.path.join(path_output, "fire_step{}.csv".format(step)))
-    return fire
+    fire_df = df[are_neighbors & are_not_suppressed]#are_under_the_wind]# & are_not_suppressed] !! check ISSUE
+    fire_df['step'] = step_value
+    fire_df.to_csv(os.path.join(path_output, "step{}_fire.csv".format(step_value)))
+    return fire_df
 
 
-for scenario in range():
+def log_files_concatenate(prefix, scenario_count):
+    list_df = []
+    files = glob.glob(os.path.join(path_output, prefix))
+    for file in files:
+        print(file)
+        df = pd.read_csv(os.path.join(path_output, file))
+        list_df.append(df)
+        # os.remove(file)
+    data = pd.concat(list_df)
+    data['scenario'] = scenario_count
+    data.to_csv(os.path.join(path_output, "fire_scenario_{}.csv".format(scenario_count)))
+
+
+def clean_up_file(prefix, path_path=path_output):
+    files = glob.glob(os.path.join(path_path, prefix))
+    for file in files:
+        print(file)
+        os.remove(file)
+
+
+
+
+
+#################################
+
+number_of_scenarios = 1
+## SCENARIOS
+for scenario in range(number_of_scenarios):
+    print("scenario : {}".format(scenario))
+    t0 = datetime.datetime.now()
     step = 0
-    ini_fire = set_initial_fire_to(edges)
-    w_speed, w_direction, w_bearing = wind_scenario()
-    fire = fire_spreading(ini_fire, w_speed, w_bearing, 0.1, step)
-    for step in range(len(edges)):
+    ignition_fire = set_initial_fire_to(edges)
+    print("ini_fire in scenario loop : {}".format(ignition_fire))
+    if ignition_fire.empty:
+        print("no ignition")
+        continue
+    w_direction, w_speed, w_bearing = wind_scenario()
+    fire = fire_spreading(df=ignition_fire, wind_speed=w_speed, wind_bearing=w_bearing, suppression_threshold=0.1, step_value=step)
+    print("fire in scenario loop : {}".format(fire))
+
+    ##### STEPS
+    for step in range(1, len(edges)):
+        print("step : {}".format(step))
         fire = fire_spreading(fire, w_speed, w_bearing, 0.1, step)
+        print("fire in step loop : {}".format(fire))
         if fire.empty:
             break
+    log_files_concatenate('step*', scenario)
+    t1 = datetime.datetime.now()
+    print("..... took : {}".format(t1 - t0))
