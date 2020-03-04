@@ -27,7 +27,7 @@ def load_data(file_name):
     bbox = box(minx, miny, maxx, maxy)
     # building point dataset
     gdf_buildings = gpd.read_file(os.path.join(path, file_name), bbox=bbox)
-    gdf_buildings.IgnProb_bl = 0.8
+    gdf_buildings.IgnProb_bl = 0.2
     # xmin,ymin,xmax,ymax = gdf_buildings.total_bounds
     return gdf_buildings
 
@@ -217,7 +217,7 @@ def clean_up_file(prefix, path_path=path_output):
 
 #################################
 clean_up_file("*csv")
-number_of_scenarios = 100
+number_of_scenarios = 1
 log_burned = []
 # SCENARIOS
 t = datetime.datetime.now()
@@ -241,7 +241,9 @@ for scenario in range(number_of_scenarios):
             break
         # get the new fires as fire_list and the old fires as burned
         burn_list.extend(fire_list)
-        fire_list = new_fire_list
+        print("burn list : {}".format(burn_list))
+        fire_list = new_fire_list.copy()
+        print("fires list : {}".format(fire_list))
         log_burned.extend(burn_list)
         if len(fire_list) == 0:
             break
