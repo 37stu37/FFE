@@ -154,35 +154,31 @@ def set_initial_fire_to(df):
     df['RNG'] = np.random.uniform(0, 1, size=len(df))  # add for random suppression per building, df.shape[0])
     onFire = df['source_IgnProb_bl'] > df['RNG']
     ignitions = df[onFire]
-    # if ignitions.empty:
-    #     print('No ignition!')
     # source nodes ignited
-    ignitions.to_csv(os.path.join(path_output, "ignition_scenario{}.csv".format(scenario)))
+    # ignitions.to_csv(os.path.join(path_output, "ignition_scenario{}.csv".format(scenario)))
     sources_on_fire = ignitions.source
     # series_neighbor_target = ignitions.target
-    return sources_on_fire
+    return list(sources_on_fire)
 
 
-def fire_spreading(fire_list, burn_list, wind_speed, wind_bearing, suppression_threshold, step_value, data=edges):
-    if fire_list.empty:
-        print('No Fire!')
+def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_threshold, step_value, data=edges):
+    # check the fire potential targets
+    df = (data['target'].isin(fire_list)) & (~data['target'].isin(list_burn))
+    if df.empty:
+        print("no fires")
         return
-    else:
-        df = data['target'].isin(fire_list)
-        df = ~data['source'].isin(burn_list)
-        df = ~data['target'].isin(burn_list)
-    # set up factor for fire spreading
+    # set up additional CONDITIONS for fire spreading
     # suppression
     df['random'] = np.random.uniform(0, 1, size=len(df))
     are_not_suppressed = df['random'] > suppression_threshold
-    # neighbors
+    # neighbors distance
     are_neighbors = df['euc_distance'] < wind_speed
-    # wind
+    # wind direction
     wind_bearing_max = wind_bearing + 45
     wind_bearing_min = wind_bearing - 45
     if wind_bearing == 360:
         wind_bearing_max = 45
-    if wind_bearing <= 0:# should not be necessary
+    if wind_bearing <= 0:  # should not be necessary
         wind_bearing_min = 0
     if wind_bearing == 999:
         wind_bearing_max = 999
@@ -193,7 +189,7 @@ def fire_spreading(fire_list, burn_list, wind_speed, wind_bearing, suppression_t
     fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed]  # issues with "are_under_the_wind
     fire_df['step'] = step_value
     fire_df.to_csv(os.path.join(path_output, "step{}_fire.csv".format(step_value)))
-    return fire_df.target.values, fire_list
+    return list(fire_df.target), list_fires
 
 
 def log_files_concatenate(prefix, scenario_count):
@@ -218,33 +214,30 @@ def clean_up_file(prefix, path_path=path_output):
 
 #################################
 
-number_of_scenarios = 1
-## SCENARIOS
+number_of_scenarios = 5
+log_burned = []
+# SCENARIOS
 for scenario in range(number_of_scenarios):
     burn_list = []
-    fire_list = []
     print("scenario : {}".format(scenario))
     t0 = datetime.datetime.now()
-    step = 0
-    ignition_fire = set_initial_fire_to(edges)
-    ignition_fire.values.append(fire_list)
+    fire_list = set_initial_fire_to(edges)
     print("# fires in scenario loop : {}".format(len(fire_list)))
     if len(fire_list) == 0:
         print("no ignition")
         continue
     w_direction, w_speed, w_bearing = wind_scenario()
-    print("fire in scenario loop : {}".format(fire))
 
-    ##### STEPS
-    for step in range(1, len(edges)):
+    # STEPS
+    for step in range(len(edges)):
         print("step : {}".format(step))
-        fires, burned = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0.1, step)
-        # get the new fires and the old fires as burned
-        fires.append(burn_list)
-        fire_list = []
-        fire_df.target.values.append(fire_list)
-        print("fire in step loop : {}".format(fire))
-        if fire.empty:
+        new_fire_list, old_fire_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0.1, step)
+        # get the new fires as fire_list and the old fires as burned
+        burn_list.extend(old_fire_list)
+        fire_list = new_fire_list
+        log_burned.extend(burn_list)
+        print("# fires in step loop : {}".format(len(fire_list)))
+        if fire_list.empty:
             break
     log_files_concatenate('step*', scenario)
     t1 = datetime.datetime.now()
