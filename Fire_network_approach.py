@@ -26,8 +26,8 @@ def load_data(file_name):
     maxx, maxy = 1748841, 5427115
     bbox = box(minx, miny, maxx, maxy)
     # building point dataset
-    gdf_buildings = gpd.read_file(os.path.join(path, file_name), bbox=bbox)
-    gdf_buildings.IgnProb_bl = 0.2
+    gdf_buildings = gpd.read_file(os.path.join(path, file_name))#, bbox=bbox)
+    gdf_buildings.IgnProb_bl = 0.1
     # xmin,ymin,xmax,ymax = gdf_buildings.total_bounds
     return gdf_buildings
 
@@ -136,8 +136,8 @@ def create_network(edge_list_dataframe):
     graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=True)
     options = {'node_color': 'red', 'node_size': 100, 'width': 1, 'alpha': 0.7,
                'with_labels': True, 'font_weight': 'bold'}
-    nx.draw_kamada_kawai(graph, **options)
-    plt.show()
+    # nx.draw_kamada_kawai(graph, **options)
+    # plt.show()
     return graph
 
 
@@ -229,7 +229,6 @@ for scenario in range(number_of_scenarios):
     fire_list = set_initial_fire_to(edges)
     print("# fires in scenario loop : {}".format(len(fire_list)))
     if len(fire_list) == 0:
-        print("no ignition")
         continue
     w_direction, w_speed, w_bearing = wind_scenario()
 
@@ -241,9 +240,9 @@ for scenario in range(number_of_scenarios):
             break
         # get the new fires as fire_list and the old fires as burned
         burn_list.extend(fire_list)
-        print("burn list : {}".format(burn_list))
+        print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
         fire_list = new_fire_list.copy()
-        print("fires list : {}".format(fire_list))
+        print("fires list : {}, length : {}".format(fire_list, len(fire_list)))
         log_burned.extend(burn_list)
         if len(fire_list) == 0:
             break
