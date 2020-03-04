@@ -27,7 +27,7 @@ def load_data(file_name):
     bbox = box(minx, miny, maxx, maxy)
     # building point dataset
     gdf_buildings = gpd.read_file(os.path.join(path, file_name), bbox=bbox)
-    gdf_buildings.IgnProb_bl = 0.5
+    gdf_buildings.IgnProb_bl = 0.8
     # xmin,ymin,xmax,ymax = gdf_buildings.total_bounds
     return gdf_buildings
 
@@ -182,7 +182,7 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
     if wind_bearing == 999:
         wind_bearing_max = 999
         wind_bearing_min = 0
-    print(("wind bearing min : {} max : {}".format(wind_bearing_min, wind_bearing_max)))
+    print(("critical distance : {}, wind bearing min : {} max : {}".format(wind_speed, wind_bearing_min, wind_bearing_max)))
     are_under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
     # spread fire based on condition
     fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed]  # issues with "are_under_the_wind
@@ -190,7 +190,7 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
     fire_df.to_csv(os.path.join(path_output, "step{}_fire.csv".format(step_value)))
     current_fire = []
     current_fire.extend(list(fire_df.target))
-    print(type(current_fire))
+    # print(type(current_fire))
     old_fire = list_fires
     return current_fire, old_fire
 
@@ -202,7 +202,7 @@ def log_files_concatenate(prefix, scenario_count):
         # print(file)
         df = pd.read_csv(os.path.join(path_output, file))
         list_df.append(df)
-        # os.remove(file)
+        os.remove(file)
     data = pd.concat(list_df)
     data['scenario'] = scenario_count
     data.to_csv(os.path.join(path_output, "fire_scenario_{}.csv".format(scenario_count)))
@@ -216,11 +216,13 @@ def clean_up_file(prefix, path_path=path_output):
 
 
 #################################
-
-number_of_scenarios = 5
+clean_up_file("*csv")
+number_of_scenarios = 100
 log_burned = []
 # SCENARIOS
+t = datetime.datetime.now()
 for scenario in range(number_of_scenarios):
+    t0 = datetime.datetime.now()
     burn_list = []
     print("scenario : {}".format(scenario))
     t0 = datetime.datetime.now()
@@ -234,15 +236,13 @@ for scenario in range(number_of_scenarios):
     # STEPS
     for step in range(len(edges)):
         print("step : {}".format(step))
-        new_fire_list, old_fire_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0.1, step, edges)
+        new_fire_list, old_fire_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
         if new_fire_list == 0:
             break
-        print(type(new_fire_list))
         # get the new fires as fire_list and the old fires as burned
         burn_list.extend(fire_list)
         fire_list = new_fire_list
         log_burned.extend(burn_list)
-        print(type(fire_list))
         if len(fire_list) == 0:
             break
         else:
@@ -250,3 +250,4 @@ for scenario in range(number_of_scenarios):
     log_files_concatenate('step*', scenario)
     t1 = datetime.datetime.now()
     print("..... took : {}".format(t1 - t0))
+print("total time : {}".format(t1 - t))
