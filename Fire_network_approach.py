@@ -155,18 +155,17 @@ def set_initial_fire_to(df):
     onFire = df['source_IgnProb_bl'] > df['RNG']
     ignitions = df[onFire]
     # source nodes ignited
-    # ignitions.to_csv(os.path.join(path_output, "ignition_scenario{}.csv".format(scenario)))
-    sources_on_fire = ignitions.source
-    # series_neighbor_target = ignitions.target
-    return list(sources_on_fire)
+    sources_on_fire = list(ignitions.source)
+    return sources_on_fire
 
 
 def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_threshold, step_value, data=edges):
     # check the fire potential targets
-    df = (data['target'].isin(fire_list)) & (~data['target'].isin(list_burn))
+    are_valid_targets = (data['target'].isin(list_fires)) & (~data['target'].isin(list_burn))
+    df = data[are_valid_targets]
     if df.empty:
         print("no fires")
-        return
+        return 0, 0  # to break the step loop
     # set up additional CONDITIONS for fire spreading
     # suppression
     df['random'] = np.random.uniform(0, 1, size=len(df))
@@ -189,14 +188,18 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
     fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed]  # issues with "are_under_the_wind
     fire_df['step'] = step_value
     fire_df.to_csv(os.path.join(path_output, "step{}_fire.csv".format(step_value)))
-    return list(fire_df.target), list_fires
+    current_fire = []
+    current_fire.extend(list(fire_df.target))
+    print(type(current_fire))
+    old_fire = list_fires
+    return current_fire, old_fire
 
 
 def log_files_concatenate(prefix, scenario_count):
     list_df = []
     files = glob.glob(os.path.join(path_output, prefix))
     for file in files:
-        print(file)
+        # print(file)
         df = pd.read_csv(os.path.join(path_output, file))
         list_df.append(df)
         # os.remove(file)
@@ -231,14 +234,19 @@ for scenario in range(number_of_scenarios):
     # STEPS
     for step in range(len(edges)):
         print("step : {}".format(step))
-        new_fire_list, old_fire_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0.1, step)
+        new_fire_list, old_fire_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0.1, step, edges)
+        if new_fire_list == 0:
+            break
+        print(type(new_fire_list))
         # get the new fires as fire_list and the old fires as burned
-        burn_list.extend(old_fire_list)
+        burn_list.extend(fire_list)
         fire_list = new_fire_list
         log_burned.extend(burn_list)
-        print("# fires in step loop : {}".format(len(fire_list)))
-        if fire_list.empty:
+        print(type(fire_list))
+        if len(fire_list) == 0:
             break
+        else:
+            print("# fires in step loop : {}".format(len(fire_list)))
     log_files_concatenate('step*', scenario)
     t1 = datetime.datetime.now()
     print("..... took : {}".format(t1 - t0))
