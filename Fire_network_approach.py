@@ -11,8 +11,11 @@ import networkx as nx
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-path = "G:/Sync/FFE/Mesa"
-path_output = "G:\Sync\FFE\FireNetwork"
+# path = "G:/Sync/FFE/Mesa"
+# path_output = "G:\Sync\FFE\FireNetwork"
+
+path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
@@ -148,20 +151,26 @@ G = create_network(edges)
 # run model
 def set_initial_fire_to(df):
     """Fine = 0, Fire = 1, Burned = 2"""
-    df['RNG'] = np.random.uniform(0, 1, size=len(df)) # add for random suppression per building, df.shape[0])
+    df['RNG'] = np.random.uniform(0, 1, size=len(df))  # add for random suppression per building, df.shape[0])
     onFire = df['source_IgnProb_bl'] > df['RNG']
     ignitions = df[onFire]
     # if ignitions.empty:
     #     print('No ignition!')
     # source nodes ignited
     ignitions.to_csv(os.path.join(path_output, "ignition_scenario{}.csv".format(scenario)))
-    return ignitions
+    sources_on_fire = ignitions.source
+    # series_neighbor_target = ignitions.target
+    return sources_on_fire
 
 
-def fire_spreading(df, wind_speed, wind_bearing, suppression_threshold, step_value):
-    if df.empty:
+def fire_spreading(fire_list, burn_list, wind_speed, wind_bearing, suppression_threshold, step_value, data=edges):
+    if fire_list.empty:
         print('No Fire!')
-        return df
+        return
+    else:
+        df = data['target'].isin(fire_list)
+        df = ~data['source'].isin(burn_list)
+        df = ~data['target'].isin(burn_list)
     # set up factor for fire spreading
     # suppression
     df['random'] = np.random.uniform(0, 1, size=len(df))
@@ -173,15 +182,18 @@ def fire_spreading(df, wind_speed, wind_bearing, suppression_threshold, step_val
     wind_bearing_min = wind_bearing - 45
     if wind_bearing == 360:
         wind_bearing_max = 45
+    if wind_bearing <= 0:# should not be necessary
+        wind_bearing_min = 0
     if wind_bearing == 999:
         wind_bearing_max = 999
-        wind_bearing_min = -999
+        wind_bearing_min = 0
+    print(("wind bearing min : {} max : {}".format(wind_bearing_min, wind_bearing_max)))
     are_under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
     # spread fire based on condition
-    fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed] # issues with "are_under_the_wind
+    fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed]  # issues with "are_under_the_wind
     fire_df['step'] = step_value
     fire_df.to_csv(os.path.join(path_output, "step{}_fire.csv".format(step_value)))
-    return fire_df
+    return fire_df.target.values, fire_list
 
 
 def log_files_concatenate(prefix, scenario_count):
@@ -204,30 +216,33 @@ def clean_up_file(prefix, path_path=path_output):
         os.remove(file)
 
 
-
-
-
 #################################
 
 number_of_scenarios = 1
 ## SCENARIOS
 for scenario in range(number_of_scenarios):
+    burn_list = []
+    fire_list = []
     print("scenario : {}".format(scenario))
     t0 = datetime.datetime.now()
     step = 0
     ignition_fire = set_initial_fire_to(edges)
-    print("ini_fire in scenario loop : {}".format(ignition_fire))
-    if ignition_fire.empty:
+    ignition_fire.values.append(fire_list)
+    print("# fires in scenario loop : {}".format(len(fire_list)))
+    if len(fire_list) == 0:
         print("no ignition")
         continue
     w_direction, w_speed, w_bearing = wind_scenario()
-    fire = fire_spreading(df=ignition_fire, wind_speed=w_speed, wind_bearing=w_bearing, suppression_threshold=0.1, step_value=step)
     print("fire in scenario loop : {}".format(fire))
 
     ##### STEPS
     for step in range(1, len(edges)):
         print("step : {}".format(step))
-        fire = fire_spreading(fire, w_speed, w_bearing, 0.1, step)
+        fires, burned = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0.1, step)
+        # get the new fires and the old fires as burned
+        fires.append(burn_list)
+        fire_list = []
+        fire_df.target.values.append(fire_list)
         print("fire in step loop : {}".format(fire))
         if fire.empty:
             break
