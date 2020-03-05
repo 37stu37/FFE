@@ -143,7 +143,7 @@ def create_network(edge_list_dataframe):
 
 # set up
 gdf = load_data("buildings_raw_pts.shp")
-gdf_polygon = load_data("buildings_raw_pts.shp")
+gdf_polygon = load_data("buildings_raw.shp")
 print("{} assets loaded".format(len(gdf)))
 # plot(gdf, gdf.IgnProb_bl)
 edges = build_edge_list(gdf, 45)
@@ -243,14 +243,16 @@ def clean_up_file(prefix, path_path=path_output):
         os.remove(file)
 
 
-def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
-    list_of_tuples = list(zip(scenarios_recorded, burned_asset))
-    df = pd.DataFrame(list_of_tuples, columns=['scenarios', 'burned_asset_index'])
-    edge_list = edge_list[['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_LON', 'source_LAT', 'source_geometry']]
-    df_id = pd.merge(df, edge_list, left_on='burned_asset_index', right_on='source', how='outer')
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.source_LON, df.source_LAT))
-    pointInPoly = gpd.sjoin(gdf, gdf_polygons, op='within')
-
+# def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
+#     list_of_tuples = list(zip(scenarios_recorded, burned_asset))
+#     df = pd.DataFrame(list_of_tuples, columns=['scenarios', 'burned_asset_index'])
+#     edge_list = edge_list[['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_LON', 'source_LAT', 'source_geometry']]
+#     df_id = pd.merge(df, edge_list, left_on='burned_asset_index', right_on='source', how='outer')
+#     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.source_LON, df.source_LAT))
+#     pointInPoly = gpd.sjoin(gdf, gdf_polygons, op='within')
+#     fig, ax = plt.subplots(1, 1)
+#     pointInPoly.plot(column='IgnProb_bl', ax=ax, legend=True)
+#     plt.show()
 
 #################################
 clean_up_file("*csv")
