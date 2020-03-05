@@ -11,11 +11,11 @@ import networkx as nx
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-# path = "G:/Sync/FFE/Mesa"
-# path_output = "G:\Sync\FFE\FireNetwork"
+path = "G:/Sync/FFE/Mesa"
+path_output = "G:\Sync\FFE\FireNetwork"
 
-path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
+# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+# path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
@@ -26,8 +26,8 @@ def load_data(file_name):
     maxx, maxy = 1748841, 5427115
     bbox = box(minx, miny, maxx, maxy)
     # building point dataset
-    gdf_buildings = gpd.read_file(os.path.join(path, file_name))#, bbox=bbox)
-    gdf_buildings.IgnProb_bl = 0.1
+    gdf_buildings = gpd.read_file(os.path.join(path, file_name), bbox=bbox)
+    gdf_buildings.IgnProb_bl = 0.02
     # xmin,ymin,xmax,ymax = gdf_buildings.total_bounds
     return gdf_buildings
 
@@ -136,13 +136,14 @@ def create_network(edge_list_dataframe):
     graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=True)
     options = {'node_color': 'red', 'node_size': 100, 'width': 1, 'alpha': 0.7,
                'with_labels': True, 'font_weight': 'bold'}
-    # nx.draw_kamada_kawai(graph, **options)
-    # plt.show()
+    nx.draw_kamada_kawai(graph, **options)
+    plt.show()
     return graph
 
 
 # set up
 gdf = load_data("buildings_raw_pts.shp")
+print("{} assets loaded".format(len(gdf)))
 # plot(gdf, gdf.IgnProb_bl)
 edges = build_edge_list(gdf, 45)
 G = create_network(edges)
@@ -156,16 +157,33 @@ def set_initial_fire_to(df):
     ignitions = df[onFire]
     # source nodes ignited
     sources_on_fire = list(ignitions.source)
+    sources_on_fire = list(dict.fromkeys(sources_on_fire))
+    return sources_on_fire
+
+
+def set_fire_to(df, existing_fires):
+    are_set_on_fire = (df['source'].isin(existing_fires))
+    spark = df[are_set_on_fire]
+    # source nodes ignited
+    sources_on_fire = list(spark.source)
+    sources_on_fire = list(dict.fromkeys(sources_on_fire))
     return sources_on_fire
 
 
 def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_threshold, step_value, data=edges):
+    # print("fire list in START def fire_spreading : {}".format(list_fires))
+    # print("fire burn in START def fire_spreading : {}".format(list_burn))
     # check the fire potential targets
-    are_valid_targets = (data['target'].isin(list_fires)) & (~data['target'].isin(list_burn))
-    df = data[are_valid_targets]
+    print(list_fires)
+    are_potential_targets = (data['source'].isin(list_fires))
+    are_not_already_burned = (~data['target'].isin(list_burn))
+    df = data[are_potential_targets & are_not_already_burned]
+    # print(df.head(5))
     if df.empty:
         print("no fires")
-        return 0, 0  # to break the step loop
+        list_burn.extend(list(list_fires))
+        list_burn = list(dict.fromkeys(list_burn))
+        return [], list_burn  # to break the step loop
     # set up additional CONDITIONS for fire spreading
     # suppression
     df['random'] = np.random.uniform(0, 1, size=len(df))
@@ -182,36 +200,43 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
     if wind_bearing == 999:
         wind_bearing_max = 999
         wind_bearing_min = 0
-    print(("critical distance : {}, wind bearing min : {} max : {}".format(wind_speed, wind_bearing_min, wind_bearing_max)))
     are_under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
     # spread fire based on condition
-    fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed]  # issues with "are_under_the_wind
+    fire_df = df
+    # fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed]  # issues with "are_under_the_wind
+    # print(len(fire_df.head(5)))
+    # print(len(fire_df))
+    list_burn.extend(list(list_fires))
     fire_df['step'] = step_value
     fire_df.to_csv(os.path.join(path_output, "step{}_fire.csv".format(step_value)))
-    current_fire = []
-    current_fire.extend(list(fire_df.target))
-    # print(type(current_fire))
-    old_fire = list_fires
-    return current_fire, old_fire
+    list_fires = list(dict.fromkeys(list(fire_df.target)))
+    list_burn.extend(list(fire_df.target))
+    list_burn = list(dict.fromkeys(list_burn))
+    # print("fire list in END def fire_spreading : {}".format(list_fires))
+    # print("fire burn in END def fire_spreading : {}".format(list_burn))
+    return list_fires, list_burn
 
 
 def log_files_concatenate(prefix, scenario_count):
     list_df = []
     files = glob.glob(os.path.join(path_output, prefix))
-    for file in files:
-        # print(file)
-        df = pd.read_csv(os.path.join(path_output, file))
-        list_df.append(df)
-        os.remove(file)
-    data = pd.concat(list_df)
-    data['scenario'] = scenario_count
-    data.to_csv(os.path.join(path_output, "fire_scenario_{}.csv".format(scenario_count)))
+    if files:
+        for file in files:
+            # print(file)
+            df = pd.read_csv(os.path.join(path_output, file))
+            list_df.append(df)
+            os.remove(file)
+        data = pd.concat(list_df)
+        data['scenario'] = scenario_count
+        data.to_csv(os.path.join(path_output, "fire_scenario_{}.csv".format(scenario_count)))
+    else:
+        print("no files to concatenate")
 
 
 def clean_up_file(prefix, path_path=path_output):
     files = glob.glob(os.path.join(path_path, prefix))
     for file in files:
-        print(file)
+        # print(file)
         os.remove(file)
 
 
@@ -219,35 +244,41 @@ def clean_up_file(prefix, path_path=path_output):
 clean_up_file("*csv")
 number_of_scenarios = 1
 log_burned = []
-# SCENARIOS
+# --- SCENARIOS
 t = datetime.datetime.now()
 for scenario in range(number_of_scenarios):
     t0 = datetime.datetime.now()
     burn_list = []
-    print("scenario : {}".format(scenario))
-    t0 = datetime.datetime.now()
+    print("--- SCENARIO : {}".format(scenario))
+    print("initiate fire")
     fire_list = set_initial_fire_to(edges)
-    print("# fires in scenario loop : {}".format(len(fire_list)))
+    x = fire_list
+    print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
+    # print("fires list in scenario loop: {}, length : {}".format(fire_list, len(fire_list)))
     if len(fire_list) == 0:
+        print("no fire")
         continue
     w_direction, w_speed, w_bearing = wind_scenario()
-
-    # STEPS
+    # print(("critical distance : {}, wind bearing : {}".format(w_speed, w_bearing)))
+    # --------- STEPS
     for step in range(len(edges)):
-        print("step : {}".format(step))
-        new_fire_list, old_fire_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
-        if new_fire_list == 0:
-            break
-        # get the new fires as fire_list and the old fires as burned
-        burn_list.extend(fire_list)
+        print("--------- STEP : {}".format(step))
+        fire_list = set_fire_to(edges, fire_list)
+        y = fire_list
+        print("fire datasets are identical with initial fire : {}".format(set(x) == set(y)))
+        print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
         print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
-        fire_list = new_fire_list.copy()
-        print("fires list : {}, length : {}".format(fire_list, len(fire_list)))
-        log_burned.extend(burn_list)
+        print("spread fire")
+        fire_list, burn_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
         if len(fire_list) == 0:
+            print("no fires")
             break
-        else:
-            print("# fires in step loop : {}".format(len(fire_list)))
+        # burn_list.extend(fire_list)
+        # burn_list = list(dict.fromkeys(burn_list))
+        print("fires list : {}, length : {}".format(fire_list, len(fire_list)))
+        print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
+        log_burned.extend(burn_list)
+
     log_files_concatenate('step*', scenario)
     t1 = datetime.datetime.now()
     print("..... took : {}".format(t1 - t0))
