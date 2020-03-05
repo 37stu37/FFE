@@ -143,6 +143,7 @@ def create_network(edge_list_dataframe):
 
 # set up
 gdf = load_data("buildings_raw_pts.shp")
+gdf_polygon = load_data("buildings_raw_pts.shp")
 print("{} assets loaded".format(len(gdf)))
 # plot(gdf, gdf.IgnProb_bl)
 edges = build_edge_list(gdf, 45)
@@ -171,8 +172,6 @@ def set_fire_to(df, existing_fires):
 
 
 def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_threshold, step_value, data=edges):
-    # print("fire list in START def fire_spreading : {}".format(list_fires))
-    # print("fire burn in START def fire_spreading : {}".format(list_burn))
     # check the fire potential targets
     print(list_fires)
     are_potential_targets = (data['source'].isin(list_fires))
@@ -188,8 +187,12 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
     # suppression
     df['random'] = np.random.uniform(0, 1, size=len(df))
     are_not_suppressed = df['random'] > suppression_threshold
+    print("fire suppressed ? {}".format(list(dict.fromkeys(list(are_not_suppressed)))))
+    df = df[are_not_suppressed]
     # neighbors distance
     are_neighbors = df['euc_distance'] < wind_speed
+    print("neighbors affected ? {}".format(list(dict.fromkeys(list(are_neighbors)))))
+    df = df[are_neighbors]
     # wind direction
     wind_bearing_max = wind_bearing + 45
     wind_bearing_min = wind_bearing - 45
@@ -201,6 +204,8 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
         wind_bearing_max = 999
         wind_bearing_min = 0
     are_under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
+    print("targets under the wind ? {}".format(list(dict.fromkeys(list(are_under_the_wind)))))
+    # df = df[are_under_the_wind]
     # spread fire based on condition
     fire_df = df
     # fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed]  # issues with "are_under_the_wind
@@ -212,8 +217,6 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
     list_fires = list(dict.fromkeys(list(fire_df.target)))
     list_burn.extend(list(fire_df.target))
     list_burn = list(dict.fromkeys(list_burn))
-    # print("fire list in END def fire_spreading : {}".format(list_fires))
-    # print("fire burn in END def fire_spreading : {}".format(list_burn))
     return list_fires, list_burn
 
 
@@ -240,10 +243,20 @@ def clean_up_file(prefix, path_path=path_output):
         os.remove(file)
 
 
+def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
+    list_of_tuples = list(zip(scenarios_recorded, burned_asset))
+    df = pd.DataFrame(list_of_tuples, columns=['scenarios', 'burned_asset_index'])
+    edge_list = edge_list[['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_LON', 'source_LAT', 'source_geometry']]
+    df_id = pd.merge(df, edge_list, left_on='burned_asset_index', right_on='source', how='outer')
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.source_LON, df.source_LAT))
+    pointInPoly = gpd.sjoin(gdf, gdf_polygons, op='within')
+
+
 #################################
 clean_up_file("*csv")
-number_of_scenarios = 1
-log_burned = []
+number_of_scenarios = 5
+scenarios_list = []
+log_burned = [] # no removing duplicate
 # --- SCENARIOS
 t = datetime.datetime.now()
 for scenario in range(number_of_scenarios):
@@ -259,7 +272,7 @@ for scenario in range(number_of_scenarios):
         print("no fire")
         continue
     w_direction, w_speed, w_bearing = wind_scenario()
-    # print(("critical distance : {}, wind bearing : {}".format(w_speed, w_bearing)))
+    print(("critical distance : {}, wind bearing : {}".format(w_speed, w_bearing)))
     # --------- STEPS
     for step in range(len(edges)):
         print("--------- STEP : {}".format(step))
@@ -269,15 +282,16 @@ for scenario in range(number_of_scenarios):
         print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
         print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
         print("spread fire")
-        fire_list, burn_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
+        fire_list, burn_list= fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
         if len(fire_list) == 0:
             print("no fires")
             break
-        # burn_list.extend(fire_list)
-        # burn_list = list(dict.fromkeys(burn_list))
         print("fires list : {}, length : {}".format(fire_list, len(fire_list)))
         print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
-        log_burned.extend(burn_list)
+    log_burned.extend(burn_list)
+    scenarios_list.extend([scenario] * len(burn_list))
+    # print("log all burn list : {}, length : {}".format(log_burned, len(log_burned)))
+    # print(scenarios_list)
 
     log_files_concatenate('step*', scenario)
     t1 = datetime.datetime.now()
