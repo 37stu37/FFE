@@ -11,11 +11,11 @@ import networkx as nx
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-path = "G:/Sync/FFE/Mesa"
-path_output = "G:\Sync\FFE\FireNetwork"
+# path = "G:/Sync/FFE/Mesa"
+# path_output = "G:\Sync\FFE\FireNetwork"
 
-# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-# path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
+path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
@@ -147,12 +147,14 @@ def create_network(edge_list_dataframe):
 gdf = load_data("buildings_raw_pts.shp")
 gdf_polygon = load_data("buildings_raw.shp")
 print("{} assets loaded".format(len(gdf)))
-fig, ax = plt.subplots(2, 2)
-gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 0], legend=True)
-gdf_polygon.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 1], legend=True)
-gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[1, 0], legend=True, alpha=0.1)
-# plt.title("{} assets loaded".format(len(gdf)))
-ax[0,0].title.set_text("{} assets loaded".format(len(gdf)))
+# fig, ax = plt.subplots(2, 2)
+# gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 0], legend=True)
+# gdf_polygon.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 1], legend=True)
+# gdf_polygon.plot(column='TARGET_FID', cmap='hsv', ax=ax[1, 0], legend=True)
+# # plt.title("{} assets loaded".format(len(gdf)))
+# ax[0,0].title.set_text("{} assets loaded".format(len(gdf)))
+# ax[0,1].title.set_text("IgnProb_bl")
+# ax[1,0].title.set_text('TARGET_FID')
 
 plt.tight_layout()
 plt.show()
@@ -184,7 +186,6 @@ def set_fire_to(df, existing_fires):
 
 def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_threshold, step_value, data=edges):
     # check the fire potential targets
-    print(list_fires)
     are_potential_targets = (data['source'].isin(list_fires))
     are_not_already_burned = (~data['target'].isin(list_burn))
     df = data[are_potential_targets & are_not_already_burned]
@@ -276,7 +277,7 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
 
 #################################
 clean_up_file("*csv")
-number_of_scenarios = 100
+number_of_scenarios = 1000
 scenarios_list = []
 log_burned = [] # no removing duplicate
 # --- SCENARIOS
