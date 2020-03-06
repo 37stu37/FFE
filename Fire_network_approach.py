@@ -24,6 +24,8 @@ def load_data(file_name):
     # crop data
     minx, miny = 1748570, 5426959
     maxx, maxy = 1748841, 5427115
+    minx, miny = 1749200, 5427400
+    maxx, maxy = 1747800, 5426400
     bbox = box(minx, miny, maxx, maxy)
     # building point dataset
     gdf_buildings = gpd.read_file(os.path.join(path, file_name), bbox=bbox)
@@ -145,9 +147,14 @@ def create_network(edge_list_dataframe):
 gdf = load_data("buildings_raw_pts.shp")
 gdf_polygon = load_data("buildings_raw.shp")
 print("{} assets loaded".format(len(gdf)))
-fig, ax = plt.subplots(1, 1)
-gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0], legend=True)
-# gdf_polygon.plot(column='IgnProb_bl', cmap='hsv', ax=ax[1], legend=True)
+fig, ax = plt.subplots(2, 2)
+gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 0], legend=True)
+gdf_polygon.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 1], legend=True)
+gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[1, 0], legend=True, alpha=0.1)
+# plt.title("{} assets loaded".format(len(gdf)))
+ax[0,0].title.set_text("{} assets loaded".format(len(gdf)))
+
+plt.tight_layout()
 plt.show()
 # plot(gdf, gdf.IgnProb_bl)
 edges = build_edge_list(gdf, 45)
@@ -250,7 +257,8 @@ def clean_up_file(prefix, path_path=path_output):
 def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     list_of_tuples = list(zip(scenarios_recorded, burned_asset))
     df = pd.DataFrame(list_of_tuples, columns=['scenarios', 'burned_asset_index'])
-    df['count'] = df['burned_asset_index'].value_counts().values
+    # df['count'] = df['burned_asset_index'].value_counts().values
+    df['count'] = df.groupby('burned_asset_index')['burned_asset_index'].transform('count')
     print(df.describe())
     df = df[['burned_asset_index', 'count']].drop_duplicates()
     edge = edge_list[
@@ -261,14 +269,14 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     df_count = df_count.drop_duplicates()
     fig, ax = plt.subplots(1, 1)
     df_count.plot(column='count', cmap='Reds', ax=ax, legend=True)
-    ax.title.set_text("Burned building after {} scenarios".format(max(scenarios_recorded)))
+    ax.title.set_text("Burned buildings after {} scenarios".format(max(scenarios_recorded)))
     plt.show()
     return df, df_id, df_count
 
 
 #################################
 clean_up_file("*csv")
-number_of_scenarios = 1
+number_of_scenarios = 100
 scenarios_list = []
 log_burned = [] # no removing duplicate
 # --- SCENARIOS
@@ -293,15 +301,15 @@ for scenario in range(number_of_scenarios):
         fire_list = set_fire_to(edges, fire_list)
         y = fire_list
         print("fire datasets are identical with initial fire : {}".format(set(x) == set(y)))
-        print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
-        print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
+        # print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
+        # print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
         print("spread fire")
         fire_list, burn_list= fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
         if len(fire_list) == 0:
             print("no fires")
             break
-        print("fires list : {}, length : {}".format(fire_list, len(fire_list)))
-        print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
+        # print("fires list : {}, length : {}".format(fire_list, len(fire_list)))
+        # print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
     log_burned.extend(burn_list)
     scenarios_list.extend([scenario] * len(burn_list))
     # print("log all burn list : {}, length : {}".format(log_burned, len(log_burned)))
@@ -310,6 +318,7 @@ for scenario in range(number_of_scenarios):
     log_files_concatenate('step*', scenario)
     t1 = datetime.datetime.now()
     print("..... took : {}".format(t1 - t0))
-print("total time : {}".format(t1 - t))
+t2 = datetime.datetime.now()
+print("total time : {}".format(t2 - t0))
 
 initial_count, count_merge, merge_shapefile = postprocessing(scenarios_list, log_burned, edges, gdf_polygon)
