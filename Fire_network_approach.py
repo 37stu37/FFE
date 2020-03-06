@@ -136,8 +136,8 @@ def build_edge_list(geodataframe, maximum_distance):
 
 def create_network(edge_list_dataframe):
     graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=True)
-    options = {'node_color': 'red', 'node_size': 100, 'width': 1, 'alpha': 0.7,
-               'with_labels': True, 'font_weight': 'bold'}
+    options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
+               'with_labels': False, 'font_weight': 'bold'}
     nx.draw_kamada_kawai(graph, **options)
     plt.show()
     return graph
@@ -260,12 +260,14 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     df = pd.DataFrame(list_of_tuples, columns=['scenarios', 'burned_asset_index'])
     # df['count'] = df['burned_asset_index'].value_counts().values
     df['count'] = df.groupby('burned_asset_index')['burned_asset_index'].transform('count')
+    print('''''')
+    print('''''')
     print(df.describe())
     df = df[['burned_asset_index', 'count']].drop_duplicates()
     edge = edge_list[
         ['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_LON', 'source_LAT', 'source_geometry']]
     df_id = pd.merge(df, edge, left_on='burned_asset_index', right_on='source', how='left')
-    print(list(df_id))
+    # print(list(df_id))
     df_count = pd.merge(gdf_polygons, df_id, left_on='TARGET_FID', right_on='source_TARGET_FID', how='outer')
     df_count = df_count.drop_duplicates()
     fig, ax = plt.subplots(1, 1)
@@ -277,7 +279,7 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
 
 #################################
 clean_up_file("*csv")
-number_of_scenarios = 1000
+number_of_scenarios = 10
 scenarios_list = []
 log_burned = [] # no removing duplicate
 # --- SCENARIOS
@@ -320,6 +322,6 @@ for scenario in range(number_of_scenarios):
     t1 = datetime.datetime.now()
     print("..... took : {}".format(t1 - t0))
 t2 = datetime.datetime.now()
-print("total time : {}".format(t2 - t0))
+print("total time : {}".format(t2 - t))
 
 initial_count, count_merge, merge_shapefile = postprocessing(scenarios_list, log_burned, edges, gdf_polygon)
