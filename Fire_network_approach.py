@@ -27,7 +27,7 @@ def load_data(file_name):
     bbox = box(minx, miny, maxx, maxy)
     # building point dataset
     gdf_buildings = gpd.read_file(os.path.join(path, file_name), bbox=bbox)
-    gdf_buildings.IgnProb_bl = 0.02
+    # gdf_buildings.IgnProb_bl = 0.02
     # xmin,ymin,xmax,ymax = gdf_buildings.total_bounds
     return gdf_buildings
 
@@ -145,6 +145,10 @@ def create_network(edge_list_dataframe):
 gdf = load_data("buildings_raw_pts.shp")
 gdf_polygon = load_data("buildings_raw.shp")
 print("{} assets loaded".format(len(gdf)))
+fig, ax = plt.subplots(1, 1)
+gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0], legend=True)
+# gdf_polygon.plot(column='IgnProb_bl', cmap='hsv', ax=ax[1], legend=True)
+plt.show()
 # plot(gdf, gdf.IgnProb_bl)
 edges = build_edge_list(gdf, 45)
 G = create_network(edges)
@@ -243,20 +247,28 @@ def clean_up_file(prefix, path_path=path_output):
         os.remove(file)
 
 
-# def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
-#     list_of_tuples = list(zip(scenarios_recorded, burned_asset))
-#     df = pd.DataFrame(list_of_tuples, columns=['scenarios', 'burned_asset_index'])
-#     edge_list = edge_list[['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_LON', 'source_LAT', 'source_geometry']]
-#     df_id = pd.merge(df, edge_list, left_on='burned_asset_index', right_on='source', how='outer')
-#     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.source_LON, df.source_LAT))
-#     pointInPoly = gpd.sjoin(gdf, gdf_polygons, op='within')
-#     fig, ax = plt.subplots(1, 1)
-#     pointInPoly.plot(column='IgnProb_bl', ax=ax, legend=True)
-#     plt.show()
+def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
+    list_of_tuples = list(zip(scenarios_recorded, burned_asset))
+    df = pd.DataFrame(list_of_tuples, columns=['scenarios', 'burned_asset_index'])
+    df['count'] = df['burned_asset_index'].value_counts().values
+    print(df.describe())
+    df = df[['burned_asset_index', 'count']].drop_duplicates()
+    edge = edge_list[
+        ['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_LON', 'source_LAT', 'source_geometry']]
+    df_id = pd.merge(df, edge, left_on='burned_asset_index', right_on='source', how='left')
+    print(list(df_id))
+    df_count = pd.merge(gdf_polygons, df_id, left_on='TARGET_FID', right_on='source_TARGET_FID', how='outer')
+    df_count = df_count.drop_duplicates()
+    fig, ax = plt.subplots(1, 1)
+    df_count.plot(column='count', cmap='Reds', ax=ax, legend=True)
+    ax.title.set_text("Burned building after {} scenarios".format(max(scenarios_recorded)))
+    plt.show()
+    return df, df_id, df_count
+
 
 #################################
 clean_up_file("*csv")
-number_of_scenarios = 5
+number_of_scenarios = 1
 scenarios_list = []
 log_burned = [] # no removing duplicate
 # --- SCENARIOS
@@ -299,3 +311,5 @@ for scenario in range(number_of_scenarios):
     t1 = datetime.datetime.now()
     print("..... took : {}".format(t1 - t0))
 print("total time : {}".format(t1 - t))
+
+initial_count, count_merge, merge_shapefile = postprocessing(scenarios_list, log_burned, edges, gdf_polygon)
