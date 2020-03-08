@@ -11,21 +11,17 @@ import networkx as nx
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-# path = "G:/Sync/FFE/Mesa"
-# path_output = "G:\Sync\FFE\FireNetwork"
+path = "G:/Sync/FFE/Mesa"
+path_output = "G:\Sync\FFE\FireNetwork"
 
-path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
+# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+# path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
 
-def load_data(file_name):
+def load_data(file_name, minx, miny, maxx, maxy):
     # crop data
-    minx, miny = 1748570, 5426959
-    maxx, maxy = 1748841, 5427115
-    minx, miny = 1749200, 5427400
-    maxx, maxy = 1747800, 5426400
     bbox = box(minx, miny, maxx, maxy)
     # building point dataset
     gdf_buildings = gpd.read_file(os.path.join(path, file_name), bbox=bbox)
@@ -144,8 +140,8 @@ def create_network(edge_list_dataframe):
 
 
 # set up
-gdf = load_data("buildings_raw_pts.shp")
-gdf_polygon = load_data("buildings_raw.shp")
+gdf = load_data("buildings_raw_pts.shp", 1748570, 5426959, 1748841, 5427115)
+gdf_polygon = load_data("buildings_raw.shp", 1748570, 5426959, 1748841, 5427115)
 print("{} assets loaded".format(len(gdf)))
 # fig, ax = plt.subplots(2, 2)
 # gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 0], legend=True)
