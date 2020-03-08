@@ -11,11 +11,11 @@ import networkx as nx
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-path = "G:/Sync/FFE/Mesa"
-path_output = "G:\Sync\FFE\FireNetwork"
+# path = "G:/Sync/FFE/Mesa"
+# path_output = "G:\Sync\FFE\FireNetwork"
 
-# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-# path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
+path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
@@ -41,45 +41,6 @@ def wind_scenario():
 
 def eudistance(v1, v2):
     return np.linalg.norm(v1 - v2)
-
-
-def calculate_initial_compass_bearing(pointA, pointB):
-    """
-    Calculates the bearing between two points.
-    The formulae used is the following:
-        θ = atan2(sin(Δlong).cos(lat2),
-                  cos(lat1).sin(lat2) − sin(lat1).cos(lat2).cos(Δlong))
-    :Parameters:
-      - `pointA: The tuple representing the latitude/longitude for the
-        first point. Latitude and longitude must be in decimal degrees
-      - `pointB: The tuple representing the latitude/longitude for the
-        second point. Latitude and longitude must be in decimal degrees
-    :Returns:
-      The bearing in degrees
-    :Returns Type:
-      float
-    """
-    if (type(pointA) != tuple) or (type(pointB) != tuple):
-        raise TypeError("Only tuples are supported as arguments")
-
-    lat1 = math.radians(pointA[0])
-    lat2 = math.radians(pointB[0])
-
-    diffLong = math.radians(pointB[1] - pointA[1])
-
-    x = math.sin(diffLong) * math.cos(lat2)
-    y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1)
-                                           * math.cos(lat2) * math.cos(diffLong))
-
-    initial_bearing = math.atan2(x, y)
-
-    # Now we have the initial bearing but math.atan2 return values
-    # from -180° to + 180° which is not what we want for a compass bearing
-    # The solution is to normalize the initial bearing as shown below
-    initial_bearing = math.degrees(initial_bearing)
-    compass_bearing = (initial_bearing + 360) % 360
-
-    return compass_bearing
 
 
 def calculate_azimuth(x1, y1, x2, y2):
@@ -140,8 +101,17 @@ def create_network(edge_list_dataframe):
 
 
 # set up
-gdf = load_data("buildings_raw_pts.shp", 1748570, 5426959, 1748841, 5427115)
+# gdf = load_data("buildings_raw_pts.shp", 1748570, 5426959, 1748841, 5427115)
 gdf_polygon = load_data("buildings_raw.shp", 1748570, 5426959, 1748841, 5427115)
+gdf_polygon["area"] = gdf_polygon['geometry'].area # m2
+gdf = gdf_polygon.copy()
+gdf['geometry'] = gdf['geometry'].centroid
+gdf['X'] = gdf.centroid.x
+gdf['Y'] = gdf.centroid.y
+gdf['d_short'] = gdf_polygon.exterior.distance(gdf)
+gdf['d_long'] = gdf['area'] / gdf['d_short']
+
+
 print("{} assets loaded".format(len(gdf)))
 # fig, ax = plt.subplots(2, 2)
 # gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 0], legend=True)
@@ -192,12 +162,10 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
         list_burn = list(dict.fromkeys(list_burn))
         return [], list_burn  # to break the step loop
     # set up additional CONDITIONS for fire spreading
-    # suppression
-    df['random'] = np.random.uniform(0, 1, size=len(df))
-    are_not_suppressed = df['random'] > suppression_threshold
-    print("fire suppressed ? {}".format(list(dict.fromkeys(list(are_not_suppressed)))))
-    df = df[are_not_suppressed]
+
     # neighbors distance
+
+
     are_neighbors = df['euc_distance'] < wind_speed
     print("neighbors affected ? {}".format(list(dict.fromkeys(list(are_neighbors)))))
     df = df[are_neighbors]
@@ -213,7 +181,13 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
         wind_bearing_min = 0
     are_under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
     print("targets under the wind ? {}".format(list(dict.fromkeys(list(are_under_the_wind)))))
-    # df = df[are_under_the_wind]
+    df = df[are_under_the_wind]
+    # suppression
+    df['random'] = np.random.uniform(0, 1, size=len(df))
+    are_not_suppressed = df['random'] > suppression_threshold
+    print("fire suppressed ? {}".format(list(dict.fromkeys(list(are_not_suppressed)))))
+    df = df[are_not_suppressed]
+
     # spread fire based on condition
     fire_df = df
     # fire_df = df[are_neighbors & are_under_the_wind & are_not_suppressed]  # issues with "are_under_the_wind
