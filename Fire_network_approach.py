@@ -78,9 +78,19 @@ def build_edge_list(geodataframe, maximum_distance):
     merged_data = pd.merge(merged_data, geo_df_TRG, left_on='target_id', right_on='target_id', how='outer')
     merged_data.rename(columns={'source_id': 'source', 'target_id': 'target'}, inplace=True)
     # calculate distance for each source / target pair
-    merged_data['v1'] = merged_data.source_X - merged_data.target_X
-    merged_data['v2'] = merged_data.source_Y - merged_data.target_Y
-    merged_data['euc_distance'] = np.hypot(merged_data.v1, merged_data.v2)
+    # create a df from polygon shape to get accurate distance
+    source_poly = merged_data[['TARGET_FID_source']]
+    target_poly = merged_data[['TARGET_FID_target']]
+    source_poly = pd.merge(source_poly, gdf_polygon['geometry'], left_on='TARGET_FID_source', right_on='TARGET_FID', how='left')
+    target_poly = pd.merge(target_poly, gdf_polygon['geometry'], left_on='TARGET_FID_target', right_on='TARGET_FID',
+                           how='left')
+    distance_series = source_poly.distance(target_poly)
+    
+    # insert distance in merged data column
+    # merged_data['v1'] = merged_data.source_X - merged_data.target_X
+    # merged_data['v2'] = merged_data.source_Y - merged_data.target_Y
+    # merged_data['euc_distance'] = np.hypot(merged_data.v1, merged_data.v2)
+    merged_data['euc_distance'] = distance_series
     # remove when distance "illegal"
     valid_distance = merged_data['euc_distance'] < maximum_distance
     not_same_node = merged_data['euc_distance'] != 0
@@ -164,7 +174,8 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
         return [], list_burn  # to break the step loop
     # set up additional CONDITIONS for fire spreading
 
-    # neighbors distance
+    # neighbors selection from buffer
+    df['buffer_geometry'] = gdf.geometry.buffer(gdf['d_long'] + wind_speed)
 
 
     are_neighbors = df['euc_distance'] < wind_speed
