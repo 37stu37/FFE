@@ -113,17 +113,18 @@ gdf['d_long'] = gdf['area'] / gdf['d_short']
 
 
 print("{} assets loaded".format(len(gdf)))
-# fig, ax = plt.subplots(2, 2)
-# gdf.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 0], legend=True)
-# gdf_polygon.plot(column='IgnProb_bl', cmap='hsv', ax=ax[0, 1], legend=True)
-# gdf_polygon.plot(column='TARGET_FID', cmap='hsv', ax=ax[1, 0], legend=True)
-# # plt.title("{} assets loaded".format(len(gdf)))
-# ax[0,0].title.set_text("{} assets loaded".format(len(gdf)))
-# ax[0,1].title.set_text("IgnProb_bl")
-# ax[1,0].title.set_text('TARGET_FID')
-
+fig, ax = plt.subplots(2, 2)
+gdf.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
+gdf_polygon.plot(column='area', cmap='hsv', ax=ax[0, 1], legend=True)
+gdf.plot(column='X', cmap='hsv', ax=ax[1, 0], legend=True)
+gdf.plot(column='Y', cmap='hsv', ax=ax[1, 1], legend=True)
+ax[0,0].title.set_text("area")
+ax[0,1].title.set_text("area")
+ax[1,0].title.set_text('X')
+ax[1,1].title.set_text('Y')
 plt.tight_layout()
 plt.show()
+
 # plot(gdf, gdf.IgnProb_bl)
 edges = build_edge_list(gdf, 45)
 G = create_network(edges)
