@@ -11,11 +11,11 @@ import networkx as nx
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-# path = "G:/Sync/FFE/Mesa"
-# path_output = "G:\Sync\FFE\FireNetwork"
+path = "G:/Sync/FFE/Mesa"
+path_output = "G:\Sync\FFE\FireNetwork"
 
-path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
+# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+# path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
@@ -262,12 +262,12 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     df_count.plot(column='count', cmap='Reds', ax=ax, legend=True)
     ax.title.set_text("Burned buildings after {} scenarios".format(max(scenarios_recorded)))
     plt.show()
-    return df, df_id, df_count
+    return df_count
 
 
 #################################
 clean_up_file("*csv")
-number_of_scenarios = 10
+number_of_scenarios = 1
 scenarios_list = []
 log_burned = [] # no removing duplicate
 # --- SCENARIOS
@@ -312,4 +312,4 @@ for scenario in range(number_of_scenarios):
 t2 = datetime.datetime.now()
 print("total time : {}".format(t2 - t))
 
-initial_count, count_merge, merge_shapefile = postprocessing(scenarios_list, log_burned, edges, gdf_polygon)
+count_gdf = postprocessing(scenarios_list, log_burned, edges, gdf_polygon)
