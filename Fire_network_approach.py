@@ -79,12 +79,12 @@ def build_edge_list(geodataframe, maximum_distance, polygon_file):
     merged_data.rename(columns={'source_id': 'source', 'target_id': 'target'}, inplace=True)
     # calculate distance for each source / target pair
     # create a df from polygon shape to get accurate distance
-    print(list(polygon_file))
+    # print(list(polygon_file))
     polygon = polygon_file[['TARGET_FID', 'geometry']]
-    print(list(polygon))
+    # print(list(polygon))
     source_poly = merged_data[['source_TARGET_FID']]
     target_poly = merged_data[['target_TARGET_FID']]
-    print(list(source_poly))
+    # print(list(source_poly))
     src_poly = pd.merge(source_poly, polygon, left_on='source_TARGET_FID', right_on='TARGET_FID', how='left')
     trg_poly = pd.merge(target_poly, polygon, left_on='target_TARGET_FID', right_on='TARGET_FID', how='left')
     src_poly_gdf = gpd.GeoDataFrame(src_poly, geometry='geometry')
@@ -169,6 +169,7 @@ def set_fire_to(df, existing_fires):
 
 def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_threshold, step_value, data=edges):
     # check the fire potential targets
+    print("fire list before spreading : {}, length : {}".format(fire_list, len(fire_list)))
     are_potential_targets = (data['source'].isin(list_fires))
     are_not_already_burned = (~data['target'].isin(list_burn))
     df = data[are_potential_targets & are_not_already_burned]
@@ -258,11 +259,13 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     # print(list(df_id))
     df_count = pd.merge(gdf_polygons, df_id, left_on='TARGET_FID', right_on='source_TARGET_FID', how='outer')
     df_count = df_count.drop_duplicates()
+    dataframe = pd.DataFrame(df_count.drop(columns=['geometry', 'source_geometry']))
+    dataframe = dataframe.dropna()
     fig, ax = plt.subplots(1, 1)
     df_count.plot(column='count', cmap='Reds', ax=ax, legend=True)
     ax.title.set_text("Burned buildings after {} scenarios".format(max(scenarios_recorded)))
     plt.show()
-    return df_count
+    return df_count, dataframe
 
 
 #################################
@@ -312,4 +315,4 @@ for scenario in range(number_of_scenarios):
 t2 = datetime.datetime.now()
 print("total time : {}".format(t2 - t))
 
-count_gdf = postprocessing(scenarios_list, log_burned, edges, gdf_polygon)
+count_gdf, count_df = postprocessing(scenarios_list, log_burned, edges, gdf_polygon)
