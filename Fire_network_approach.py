@@ -54,7 +54,7 @@ def plot(df, column_df):
     plt.show()
 
 
-def build_edge_list(geodataframe, maximum_distance):
+def build_edge_list(geodataframe, maximum_distance, polygon_file):
     # create arrays for different id combination
     n = np.arange(0, len(geodataframe))
     target = [n] * len(geodataframe)
@@ -68,7 +68,7 @@ def build_edge_list(geodataframe, maximum_distance):
     geo_df = geodataframe.copy()
     geo_df['id'] = geo_df.index
     # create source / target gdf from gdf.columns of interest
-    geo_df = geo_df[['id', 'TARGET_FID', 'X', 'Y', 'LON', 'LAT', 'geometry', 'IgnProb_bl']]
+    geo_df = geo_df[['id', 'TARGET_FID', 'X', 'Y', 'geometry', 'IgnProb_bl']]
     geo_df_TRG = geo_df.copy()
     geo_df_TRG.columns = ['target_' + str(col) for col in geo_df_TRG.columns]
     geo_df_SRC = geo_df.copy()
@@ -79,16 +79,22 @@ def build_edge_list(geodataframe, maximum_distance):
     merged_data.rename(columns={'source_id': 'source', 'target_id': 'target'}, inplace=True)
     # calculate distance for each source / target pair
     # create a df from polygon shape to get accurate distance
-    source_poly = merged_data[['TARGET_FID_source']]
-    target_poly = merged_data[['TARGET_FID_target']]
-    source_poly = pd.merge(source_poly, gdf_polygon['geometry'], left_on='TARGET_FID_source', right_on='TARGET_FID', how='left')
-    target_poly = pd.merge(target_poly, gdf_polygon['geometry'], left_on='TARGET_FID_target', right_on='TARGET_FID',
-                           how='left')
-    distance_series = source_poly.distance(target_poly)
-    
+    print(list(polygon_file))
+    polygon = polygon_file[['TARGET_FID', 'geometry']]
+    print(list(polygon))
+    source_poly = merged_data[['source_TARGET_FID']]
+    target_poly = merged_data[['target_TARGET_FID']]
+    print(list(source_poly))
+    src_poly = pd.merge(source_poly, polygon, left_on='source_TARGET_FID', right_on='TARGET_FID', how='left')
+    trg_poly = pd.merge(target_poly, polygon, left_on='target_TARGET_FID', right_on='TARGET_FID', how='left')
+    src_poly_gdf = gpd.GeoDataFrame(src_poly, geometry='geometry')
+    trg_poly_gdf = gpd.GeoDataFrame(trg_poly, geometry='geometry')
+    distance_series = src_poly_gdf.distance(trg_poly_gdf)
+    print(distance_series)
+
     # insert distance in merged data column
-    # merged_data['v1'] = merged_data.source_X - merged_data.target_X
-    # merged_data['v2'] = merged_data.source_Y - merged_data.target_Y
+    merged_data['v1'] = merged_data.source_X - merged_data.target_X
+    merged_data['v2'] = merged_data.source_Y - merged_data.target_Y
     # merged_data['euc_distance'] = np.hypot(merged_data.v1, merged_data.v2)
     merged_data['euc_distance'] = distance_series
     # remove when distance "illegal"
@@ -136,7 +142,7 @@ plt.tight_layout()
 plt.show()
 
 # plot(gdf, gdf.IgnProb_bl)
-edges = build_edge_list(gdf, 45)
+edges = build_edge_list(gdf, 45, gdf_polygon)
 G = create_network(edges)
 
 
@@ -247,7 +253,7 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     print(df.describe())
     df = df[['burned_asset_index', 'count']].drop_duplicates()
     edge = edge_list[
-        ['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_LON', 'source_LAT', 'source_geometry']]
+        ['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_geometry']]
     df_id = pd.merge(df, edge, left_on='burned_asset_index', right_on='source', how='left')
     # print(list(df_id))
     df_count = pd.merge(gdf_polygons, df_id, left_on='TARGET_FID', right_on='source_TARGET_FID', how='outer')
