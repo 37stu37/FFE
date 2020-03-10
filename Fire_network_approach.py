@@ -8,11 +8,14 @@ import pandas as pd
 import geopandas as gpd
 from shapely.geometry import box
 import networkx as nx
+from shapely.geometry import Point
+import imageio
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
 path = "G:/Sync/FFE/Mesa"
 path_output = "G:\Sync\FFE\FireNetwork"
+
 
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
 # path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
@@ -90,7 +93,7 @@ def build_edge_list(geodataframe, maximum_distance, polygon_file):
     src_poly_gdf = gpd.GeoDataFrame(src_poly, geometry='geometry')
     trg_poly_gdf = gpd.GeoDataFrame(trg_poly, geometry='geometry')
     distance_series = src_poly_gdf.distance(trg_poly_gdf)
-    print(distance_series)
+    # print(distance_series)
 
     # insert distance in merged data column
     merged_data['v1'] = merged_data.source_X - merged_data.target_X
@@ -116,36 +119,6 @@ def create_network(edge_list_dataframe):
     return graph
 
 
-# set up
-# gdf = load_data("buildings_raw_pts.shp", 1748570, 5426959, 1748841, 5427115)
-gdf_polygon = load_data("buildings_raw.shp", 1748570, 5426959, 1748841, 5427115)
-gdf_polygon["area"] = gdf_polygon['geometry'].area # m2
-gdf = gdf_polygon.copy()
-gdf['geometry'] = gdf['geometry'].centroid
-gdf['X'] = gdf.centroid.x
-gdf['Y'] = gdf.centroid.y
-gdf['d_short'] = gdf_polygon.exterior.distance(gdf)
-gdf['d_long'] = gdf['area'] / gdf['d_short']
-
-
-# create edge list and network
-edges = build_edge_list(gdf, 45, gdf_polygon)
-
-print("{} assets loaded".format(len(gdf)))
-fig, ax = plt.subplots(2, 2)
-gdf.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
-gdf_polygon.plot(column='area', cmap='hsv', ax=ax[0, 1], legend=True)
-gdf.plot(column='TARGET_FID', cmap='hsv', ax=ax[1, 0], legend=True)
-ax[0,0].title.set_text("area")
-ax[0,1].title.set_text("area")
-ax[1,0].title.set_text('FID')
-plt.tight_layout()
-plt.show()
-
-# create edges
-G = create_network(edges)
-
-
 # run model
 def set_initial_fire_to(df):
     """Fine = 0, Fire = 1, Burned = 2"""
@@ -167,15 +140,14 @@ def set_fire_to(df, existing_fires):
     return sources_on_fire
 
 
-def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_threshold, step_value, data=edges):
+def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_threshold, step_value, data):
     # check the fire potential targets
-    print("fire list before spreading : {}, length : {}".format(fire_list, len(fire_list)))
+    # print("fire list before spreading : {}, length : {}".format(fire_list, len(fire_list)))
     are_potential_targets = (data['source'].isin(list_fires))
     are_not_already_burned = (~data['target'].isin(list_burn))
     df = data[are_potential_targets & are_not_already_burned]
-    # print(df.head(5))
     if df.empty:
-        print("no fires")
+        # print("no fires")
         list_burn.extend(list(list_fires))
         list_burn = list(dict.fromkeys(list_burn))
         return [], list_burn  # to break the step loop
@@ -184,9 +156,8 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
     # neighbors selection from buffer
     df['buffer_geometry'] = gdf.geometry.buffer(gdf['d_long'] + wind_speed)
 
-
     are_neighbors = df['euc_distance'] < wind_speed
-    print("neighbors affected ? {}".format(list(dict.fromkeys(list(are_neighbors)))))
+    # print("neighbors affected ? {}".format(list(dict.fromkeys(list(are_neighbors)))))
     df = df[are_neighbors]
     # wind direction
     wind_bearing_max = wind_bearing + 45
@@ -199,12 +170,12 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
         wind_bearing_max = 999
         wind_bearing_min = 0
     are_under_the_wind = (df['bearing'] < wind_bearing_max) & (df['bearing'] > wind_bearing_min)
-    print("targets under the wind ? {}".format(list(dict.fromkeys(list(are_under_the_wind)))))
+    # print("targets under the wind ? {}".format(list(dict.fromkeys(list(are_under_the_wind)))))
     df = df[are_under_the_wind]
     # suppression
     df['random'] = np.random.uniform(0, 1, size=len(df))
     are_not_suppressed = df['random'] > suppression_threshold
-    print("fire suppressed ? {}".format(list(dict.fromkeys(list(are_not_suppressed)))))
+    # print("fire suppressed ? {}".format(list(dict.fromkeys(list(are_not_suppressed)))))
     df = df[are_not_suppressed]
 
     # spread fire based on condition
@@ -249,8 +220,6 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     df = pd.DataFrame(list_of_tuples, columns=['scenarios', 'burned_asset_index'])
     # df['count'] = df['burned_asset_index'].value_counts().values
     df['count'] = df.groupby('burned_asset_index')['burned_asset_index'].transform('count')
-    print('''''')
-    print('''''')
     print(df.describe())
     df = df[['burned_asset_index', 'count']].drop_duplicates()
     edge = edge_list[
@@ -262,45 +231,76 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     dataframe = pd.DataFrame(df_count.drop(columns=['geometry', 'source_geometry']))
     dataframe = dataframe.dropna()
     fig, ax = plt.subplots(1, 1)
-    df_count.plot(column='count', cmap='Reds', ax=ax, legend=True)
+    df_count.plot(column='count', cmap='RdYlBu_r', ax=ax, legend=True)
     ax.title.set_text("Burned buildings after {} scenarios".format(max(scenarios_recorded)))
     plt.show()
+    df_count = df_count.drop(columns=['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_geometry'])
+    count_gdf.to_csv(os.path.join(path_output, "results.csv"))
+    # count_gdf.to_file(os.path.join(path_output, "results.shp"))
     return df_count, dataframe
 
 
+# set up
+# gdf = load_data("buildings_raw_pts.shp", 1748570, 5426959, 1748841, 5427115)
+gdf_polygon = load_data("buildings_raw.shp", 1748000, 5424148, 1750000, 5427600)
+gdf_polygon["area"] = gdf_polygon['geometry'].area  # m2
+gdf = gdf_polygon.copy()
+gdf['geometry'] = gdf['geometry'].centroid
+gdf['X'] = gdf.centroid.x
+gdf['Y'] = gdf.centroid.y
+gdf['d_short'] = gdf_polygon.exterior.distance(gdf)
+gdf['d_long'] = gdf['area'] / gdf['d_short']
+
+# create edge list and network
+edges = build_edge_list(gdf, 45, gdf_polygon)
+
+# print("{} assets loaded".format(len(gdf)))
+# fig, ax = plt.subplots(2, 2)
+# gdf.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
+# gdf_polygon.plot(column='area', cmap='hsv', ax=ax[0, 1], legend=True)
+# gdf.plot(column='TARGET_FID', cmap='hsv', ax=ax[1, 0], legend=True)
+# ax[0,0].title.set_text("area")
+# ax[0,1].title.set_text("area")
+# ax[1,0].title.set_text('FID')
+# plt.tight_layout()
+# plt.show()
+
+# create edges
+# G = create_network(edges)
+
 #################################
 clean_up_file("*csv")
-number_of_scenarios = 1
+number_of_scenarios = 1000
 scenarios_list = []
-log_burned = [] # no removing duplicate
+log_burned = []  # no removing duplicate
 # --- SCENARIOS
 t = datetime.datetime.now()
 for scenario in range(number_of_scenarios):
     t0 = datetime.datetime.now()
     burn_list = []
     print("--- SCENARIO : {}".format(scenario))
-    print("initiate fire")
+    # print("initiate fire")
     fire_list = set_initial_fire_to(edges)
     x = fire_list
-    print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
+    # print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
     # print("fires list in scenario loop: {}, length : {}".format(fire_list, len(fire_list)))
     if len(fire_list) == 0:
         print("no fire")
         continue
     w_direction, w_speed, w_bearing = wind_scenario()
-    print(("critical distance : {}, wind bearing : {}".format(w_speed, w_bearing)))
+    # print(("critical distance : {}, wind bearing : {}".format(w_speed, w_bearing)))
     # --------- STEPS
     for step in range(len(edges)):
         print("--------- STEP : {}".format(step))
         fire_list = set_fire_to(edges, fire_list)
         y = fire_list
-        print("fire datasets are identical with initial fire : {}".format(set(x) == set(y)))
+        # print("fire datasets are identical with initial fire : {}".format(set(x) == set(y)))
         # print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
         # print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
-        print("spread fire")
-        fire_list, burn_list= fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
+        # print("spread fire")
+        fire_list, burn_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
         if len(fire_list) == 0:
-            print("no fires")
+            # print("no fires")
             break
         # print("fires list : {}, length : {}".format(fire_list, len(fire_list)))
         # print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
