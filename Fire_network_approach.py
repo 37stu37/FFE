@@ -13,11 +13,11 @@ from shapely.geometry import Point
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-# path = "G:/Sync/FFE/Mesa"
-# path_output = "G:\Sync\FFE\FireNetwork"
+path = "G:/Sync/FFE/Mesa"
+path_output = "G:\Sync\FFE\FireNetwork"
 
-path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
+# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+# path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
 def load_data(file_name, minx, miny, maxx, maxy):
