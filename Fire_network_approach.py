@@ -235,8 +235,8 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     ax.title.set_text("Burned buildings after {} scenarios".format(max(scenarios_recorded)))
     plt.show()
     df_count = df_count.drop(columns=['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_geometry'])
-    count_gdf.to_csv(os.path.join(path_output, "results.csv"))
-    # count_gdf.to_file(os.path.join(path_output, "results.shp"))
+    df_count.to_csv(os.path.join(path_output, "results.csv"))
+    # df_count.to_file(os.path.join(path_output, "results.shp"))
     return df_count, dataframe
 
 
