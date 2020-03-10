@@ -254,8 +254,8 @@ def concatenate_all_results_in_shapefile(prefix, scenario_count):
         return gdf_data
 
 # set up
-# gdf = load_data("buildings_raw_pts.shp", 1748570, 5426959, 1748841, 5427115)
-gdf_polygon = load_data("buildings_raw.shp", 1748000, 5424148, 1750000, 5427600)
+gdf_polygon = load_data("buildings_raw.shp", 1740508, 5420049, 1755776, 5443033) # full area
+# gdf_polygon = load_data("buildings_raw.shp", 1748000, 5424148, 1750000, 5427600)
 gdf_polygon["area"] = gdf_polygon['geometry'].area  # m2
 gdf = gdf_polygon.copy()
 gdf['geometry'] = gdf['geometry'].centroid
