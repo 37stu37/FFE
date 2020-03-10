@@ -20,8 +20,6 @@ path_output = "G:\Sync\FFE\FireNetwork"
 # path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
-# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-
 def load_data(file_name, minx, miny, maxx, maxy):
     # crop data
     bbox = box(minx, miny, maxx, maxy)
