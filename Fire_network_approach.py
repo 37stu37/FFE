@@ -9,16 +9,16 @@ import geopandas as gpd
 from shapely.geometry import box
 import networkx as nx
 from shapely.geometry import Point
-import imageio
+# import imageio
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-path = "G:/Sync/FFE/Mesa"
-path_output = "G:\Sync\FFE\FireNetwork"
+# path = "G:/Sync/FFE/Mesa"
+# path_output = "G:\Sync\FFE\FireNetwork"
 
 
-# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-# path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
+path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
@@ -192,7 +192,7 @@ def fire_spreading(list_fires, list_burn, wind_speed, wind_bearing, suppression_
     return list_fires, list_burn
 
 
-def log_files_concatenate(prefix, scenario_count):
+def log_files_concatenate(prefix, scenario_count, geographical_region):
     list_df = []
     files = glob.glob(os.path.join(path_output, prefix))
     if files:
@@ -203,7 +203,7 @@ def log_files_concatenate(prefix, scenario_count):
             os.remove(file)
         data = pd.concat(list_df)
         data['scenario'] = scenario_count
-        data.to_csv(os.path.join(path_output, "fire_scenario_{}.csv".format(scenario_count)))
+        data.to_csv(os.path.join(path_output, "{}_fire_scenario_{}.csv".format(geographical_region, scenario_count)))
     else:
         print("no files to concatenate")
 
@@ -215,7 +215,7 @@ def clean_up_file(prefix, path_path=path_output):
         os.remove(file)
 
 
-def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
+def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons, geographical_region):
     list_of_tuples = list(zip(scenarios_recorded, burned_asset))
     df = pd.DataFrame(list_of_tuples, columns=['scenarios', 'burned_asset_index'])
     # df['count'] = df['burned_asset_index'].value_counts().values
@@ -235,10 +235,23 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     ax.title.set_text("Burned buildings after {} scenarios".format(max(scenarios_recorded)))
     plt.show()
     df_count = df_count.drop(columns=['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_geometry'])
-    df_count.to_csv(os.path.join(path_output, "results.csv"))
+    df_count.to_csv(os.path.join(path_output, "results_{}.csv".format(geographical_region)))
     # df_count.to_file(os.path.join(path_output, "results.shp"))
     return df_count, dataframe
 
+
+def concatenate_all_results_in_shapefile(prefix, scenario_count):
+    list_df = []
+    files = glob.glob(os.path.join(path_output, prefix))
+    if files:
+        for file in files:
+            # print(file)
+            df = pd.read_csv(os.path.join(path_output, file))
+            list_df.append(df)
+        data = pd.concat(list_df)
+        data.to_csv(os.path.join(path_output, "Allresults_fire_scenario_{}.csv".format(scenario_count)))
+        gdf_data = gpd.GeoDataFrame(data)
+        return gdf_data
 
 # set up
 # gdf = load_data("buildings_raw_pts.shp", 1748570, 5426959, 1748841, 5427115)
@@ -251,6 +264,7 @@ gdf['Y'] = gdf.centroid.y
 gdf['d_short'] = gdf_polygon.exterior.distance(gdf)
 gdf['d_long'] = gdf['area'] / gdf['d_short']
 
+# create a list of the
 # create edge list and network
 edges = build_edge_list(gdf, 45, gdf_polygon)
 
@@ -270,49 +284,54 @@ edges = build_edge_list(gdf, 45, gdf_polygon)
 
 #################################
 clean_up_file("*csv")
-number_of_scenarios = 1000
+number_of_scenarios = 1001
 scenarios_list = []
 log_burned = []  # no removing duplicate
+list_suburb = list(gdf_polygon.suburb_loc.drop_duplicates())
 # --- SCENARIOS
 t = datetime.datetime.now()
-for scenario in range(number_of_scenarios):
-    t0 = datetime.datetime.now()
-    burn_list = []
-    print("--- SCENARIO : {}".format(scenario))
-    # print("initiate fire")
-    fire_list = set_initial_fire_to(edges)
-    x = fire_list
-    # print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
-    # print("fires list in scenario loop: {}, length : {}".format(fire_list, len(fire_list)))
-    if len(fire_list) == 0:
-        print("no fire")
-        continue
-    w_direction, w_speed, w_bearing = wind_scenario()
-    # print(("critical distance : {}, wind bearing : {}".format(w_speed, w_bearing)))
-    # --------- STEPS
-    for step in range(len(edges)):
-        print("--------- STEP : {}".format(step))
-        fire_list = set_fire_to(edges, fire_list)
-        y = fire_list
-        # print("fire datasets are identical with initial fire : {}".format(set(x) == set(y)))
+for suburb in list_suburb:
+    for scenario in range(number_of_scenarios):
+        t0 = datetime.datetime.now()
+        burn_list = []
+        print("--- SCENARIO : {}".format(scenario))
+        # print("initiate fire")
+        fire_list = set_initial_fire_to(edges)
+        x = fire_list
         # print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
-        # print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
-        # print("spread fire")
-        fire_list, burn_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
+        # print("fires list in scenario loop: {}, length : {}".format(fire_list, len(fire_list)))
         if len(fire_list) == 0:
-            # print("no fires")
-            break
-        # print("fires list : {}, length : {}".format(fire_list, len(fire_list)))
-        # print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
-    log_burned.extend(burn_list)
-    scenarios_list.extend([scenario] * len(burn_list))
-    # print("log all burn list : {}, length : {}".format(log_burned, len(log_burned)))
-    # print(scenarios_list)
+            print("no fire")
+            continue
+        w_direction, w_speed, w_bearing = wind_scenario()
+        # print(("critical distance : {}, wind bearing : {}".format(w_speed, w_bearing)))
+        # --------- STEPS
+        for step in range(len(edges)):
+            print("--------- STEP : {}".format(step))
+            fire_list = set_fire_to(edges, fire_list)
+            y = fire_list
+            # print("fire datasets are identical with initial fire : {}".format(set(x) == set(y)))
+            # print("fire list : {}, length : {}".format(fire_list, len(fire_list)))
+            # print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
+            # print("spread fire")
+            fire_list, burn_list = fire_spreading(fire_list, burn_list, w_speed, w_bearing, 0, step, edges)
+            if len(fire_list) == 0:
+                # print("no fires")
+                break
+            # print("fires list : {}, length : {}".format(fire_list, len(fire_list)))
+            # print("burn list : {}, length : {}".format(burn_list, len(burn_list)))
+        log_burned.extend(burn_list)
+        scenarios_list.extend([scenario] * len(burn_list))
+        # print("log all burn list : {}, length : {}".format(log_burned, len(log_burned)))
+        # print(scenarios_list)
 
-    log_files_concatenate('step*', scenario)
-    t1 = datetime.datetime.now()
-    print("..... took : {}".format(t1 - t0))
-t2 = datetime.datetime.now()
-print("total time : {}".format(t2 - t))
+        log_files_concatenate('step*', scenario, suburb)
+        t1 = datetime.datetime.now()
+        print("..... took : {}".format(t1 - t0))
+    t2 = datetime.datetime.now()
+    print("total time for the {} suburb : {}".format(suburb, t2 - t))
+    count_gdf, count_df = postprocessing(scenarios_list, log_burned, edges, gdf_polygon, suburb)
+t3 = datetime.datetime.now()
+print("total time for all suburbs : {}".format(t3 - t))
 
-count_gdf, count_df = postprocessing(scenarios_list, log_burned, edges, gdf_polygon)
+
