@@ -251,15 +251,15 @@ def concatenate_all_results_in_shapefile(prefix, scenario_count):
         return gdf_data
 
 # set up
-gdf_polygon = load_data("buildings_raw.shp", 1740508, 5420049, 1755776, 5443033) # full area
-# gdf_polygon = load_data("buildings_raw.shp", 1748000, 5424148, 1750000, 5427600)
-gdf_polygon["area"] = gdf_polygon['geometry'].area  # m2
-gdf = gdf_polygon.copy()
-gdf['geometry'] = gdf['geometry'].centroid
-gdf['X'] = gdf.centroid.x
-gdf['Y'] = gdf.centroid.y
-gdf['d_short'] = gdf_polygon.exterior.distance(gdf)
-gdf['d_long'] = gdf['area'] / gdf['d_short']
+entire_gdf_polygon = load_data("buildings_raw.shp", 1740508, 5420049, 1755776, 5443033) # full area
+# entire_gdf_polygon = load_data("buildings_raw.shp", 1748000, 5424148, 1750000, 5427600)
+entire_gdf_polygon["area"] = entire_gdf_polygon['geometry'].area  # m2
+entire_gdf = entire_gdf_polygon.copy()
+entire_gdf['geometry'] = entire_gdf['geometry'].centroid
+entire_gdf['X'] = entire_gdf.centroid.x
+entire_gdf['Y'] = entire_gdf.centroid.y
+entire_gdf['d_short'] = entire_gdf_polygon.exterior.distance(entire_gdf)
+entire_gdf['d_long'] = entire_gdf['area'] / entire_gdf['d_short']
 
 # create a list of the
 
@@ -282,14 +282,14 @@ clean_up_file("*csv")
 number_of_scenarios = 1001
 scenarios_list = []
 log_burned = []  # no removing duplicate
-list_suburb = list(gdf_polygon.suburb_loc.drop_duplicates())
+list_suburb = list(entire_gdf_polygon.suburb_loc.drop_duplicates())
 # --- SCENARIOS
 t = datetime.datetime.now()
 for suburb in list_suburb:
-    sub_gdf = gdf[gdf['suburb_loc'] == suburb]
-    sub_gdf_polygon = gdf_polygon[gdf_polygon['suburb_loc'] == suburb]
+    gdf = entire_gdf_polygon[entire_gdf_polygon['suburb_loc'] == suburb]
+    gdf_polygon = entire_gdf_polygon[entire_gdf_polygon['suburb_loc'] == suburb]
     # create edge list and network based on suburb buildings
-    edges = build_edge_list(sub_gdf, 45, sub_gdf_polygon)
+    edges = build_edge_list(gdf, 45, gdf_polygon)
     for scenario in range(number_of_scenarios):
         t0 = datetime.datetime.now()
         burn_list = []
@@ -329,7 +329,7 @@ for suburb in list_suburb:
         print("..... took : {}".format(t1 - t0))
     t2 = datetime.datetime.now()
     print("total time for the {} suburb : {}".format(suburb, t2 - t))
-    count_gdf, count_df = postprocessing(scenarios_list, log_burned, edges, sub_gdf_polygon, suburb)
+    count_gdf, count_df = postprocessing(scenarios_list, log_burned, edges, gdf_polygon, suburb)
 t3 = datetime.datetime.now()
 print("total time for all suburbs : {}".format(t3 - t))
 
