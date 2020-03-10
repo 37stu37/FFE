@@ -265,8 +265,6 @@ gdf['d_short'] = gdf_polygon.exterior.distance(gdf)
 gdf['d_long'] = gdf['area'] / gdf['d_short']
 
 # create a list of the
-# create edge list and network
-edges = build_edge_list(gdf, 45, gdf_polygon)
 
 # print("{} assets loaded".format(len(gdf)))
 # fig, ax = plt.subplots(2, 2)
@@ -291,6 +289,10 @@ list_suburb = list(gdf_polygon.suburb_loc.drop_duplicates())
 # --- SCENARIOS
 t = datetime.datetime.now()
 for suburb in list_suburb:
+    sub_gdf = gdf[gdf['suburb_loc'] == suburb]
+    sub_gdf_polygon = gdf_polygon[gdf_polygon['suburb_loc'] == suburb]
+    # create edge list and network based on suburb buildings
+    edges = build_edge_list(sub_gdf, 45, sub_gdf_polygon)
     for scenario in range(number_of_scenarios):
         t0 = datetime.datetime.now()
         burn_list = []
@@ -330,7 +332,7 @@ for suburb in list_suburb:
         print("..... took : {}".format(t1 - t0))
     t2 = datetime.datetime.now()
     print("total time for the {} suburb : {}".format(suburb, t2 - t))
-    count_gdf, count_df = postprocessing(scenarios_list, log_burned, edges, gdf_polygon, suburb)
+    count_gdf, count_df = postprocessing(scenarios_list, log_burned, edges, sub_gdf_polygon, suburb)
 t3 = datetime.datetime.now()
 print("total time for all suburbs : {}".format(t3 - t))
 
