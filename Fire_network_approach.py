@@ -13,11 +13,11 @@ from shapely.geometry import Point
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-path = "G:/Sync/FFE/Mesa"
-path_output = "G:\Sync\FFE\FireNetwork"
+# path = "G:/Sync/FFE/Mesa"
+# path_output = "G:\Sync\FFE\FireNetwork"
 
-# path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
-# path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
+path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
+path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
 def load_data(file_name, minx, miny, maxx, maxy):
@@ -286,8 +286,10 @@ list_suburb = list(entire_gdf_polygon.suburb_loc.drop_duplicates())
 # --- SCENARIOS
 t = datetime.datetime.now()
 for suburb in list_suburb:
-    gdf = entire_gdf_polygon[entire_gdf_polygon['suburb_loc'] == suburb]
+    gdf = entire_gdf[entire_gdf['suburb_loc'] == suburb]
+    print(gdf.head())
     gdf_polygon = entire_gdf_polygon[entire_gdf_polygon['suburb_loc'] == suburb]
+    print(gdf_polygon.head())
     # create edge list and network based on suburb buildings
     edges = build_edge_list(gdf, 45, gdf_polygon)
     for scenario in range(number_of_scenarios):
