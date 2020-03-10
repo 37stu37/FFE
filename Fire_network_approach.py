@@ -334,4 +334,6 @@ for suburb in list_suburb:
 t3 = datetime.datetime.now()
 print("total time for all suburbs : {}".format(t3 - t))
 
+gdf_final_1KFFE = concatenate_all_results_in_shapefile('results*', number_of_scenarios)
+
 
