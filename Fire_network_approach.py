@@ -9,6 +9,7 @@ import geopandas as gpd
 from shapely.geometry import box
 import networkx as nx
 from shapely.geometry import Point
+
 # import imageio
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -17,15 +18,16 @@ pd.option_context('display.max_rows', None, 'display.max_columns', None)
 path = "G:/Sync/FFE/Mesa"
 path_output = "G:\Sync\FFE\FireNetwork"
 
+
 # path = '/Users/alex/Google Drive/05_Sync/FFE/Mesa'
 # path_output = '/Users/alex/Google Drive/05_Sync/FFE/Mesa/output'
 
 
-def load_data(file_name, minx, miny, maxx, maxy):
+def load_data(file_name):  # , minx, miny, maxx, maxy):
     # crop data
-    bbox = box(minx, miny, maxx, maxy)
+    # bbox = box(minx, miny, maxx, maxy)
     # building point dataset
-    gdf_buildings = gpd.read_file(os.path.join(path, file_name), bbox=bbox)
+    gdf_buildings = gpd.read_file(os.path.join(path, file_name))  # , bbox=bbox)
     # gdf_buildings.IgnProb_bl = 0.02
     # xmin,ymin,xmax,ymax = gdf_buildings.total_bounds
     return gdf_buildings
@@ -65,24 +67,27 @@ def build_edge_list(geodataframe, maximum_distance, polygon_file):
     df = pd.DataFrame()
     df['source_id'] = source
     df['target_id'] = target
+    # print("df : {}".format(df))
     # copy geodataframe with index
-    geo_df = geodataframe.copy()
+    geo_df = geodataframe.copy().reset_index()
     geo_df['id'] = geo_df.index
+    # print("geo_df : {}".format(geo_df))
+    # print("geo_df.id : {}".format(geo_df.id))
     # create source / target gdf from gdf.columns of interest
     geo_df = geo_df[['id', 'TARGET_FID', 'X', 'Y', 'geometry', 'IgnProb_bl']]
     geo_df_TRG = geo_df.copy()
     geo_df_TRG.columns = ['target_' + str(col) for col in geo_df_TRG.columns]
-    print(geo_df_TRG)
+    # print("geo_df_TRG : {}".format(geo_df_TRG))
     geo_df_SRC = geo_df.copy()
     geo_df_SRC.columns = ['source_' + str(col) for col in geo_df_SRC.columns]
-    print(geo_df_SRC)
+    # print("geo_df_SRC : {}".format(geo_df_SRC))
     # merge data
     merged_data = pd.merge(df, geo_df_SRC, left_on='source_id', right_on='source_id', how='outer')
-    print(merged_data)
+    # print("merged data : {} ".format(merged_data))
     merged_data.isnull().sum()
     merged_data = pd.merge(merged_data, geo_df_TRG, left_on='target_id', right_on='target_id', how='outer')
     merged_data.rename(columns={'source_id': 'source', 'target_id': 'target'}, inplace=True)
-    print(merged_data)
+    # print("merged data : {} ".format(merged_data))
     merged_data.isnull().sum()
     # calculate distance for each source / target pair
     # create a df from polygon shape to get accurate distance
@@ -113,10 +118,10 @@ def build_edge_list(geodataframe, maximum_distance, polygon_file):
 
 def create_network(edge_list_dataframe):
     graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=True)
-    options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
-               'with_labels': False, 'font_weight': 'bold'}
-    nx.draw_kamada_kawai(graph, **options)
-    plt.show()
+    # options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
+    #            'with_labels': False, 'font_weight': 'bold'}
+    # nx.draw_kamada_kawai(graph, **options)
+    # plt.show()
     return graph
 
 
@@ -234,7 +239,9 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons, ge
     fig, ax = plt.subplots(1, 1)
     df_count.plot(column='count', cmap='RdYlBu_r', ax=ax, legend=True)
     ax.title.set_text("Burned buildings after {} scenarios".format(max(scenarios_recorded)))
-    plt.show()
+    plt.savefig(os.path.join(path_output, "results_{}.png".format(geographical_region)))
+    plt.close(fig)
+    # plt.show()
     df_count = df_count.drop(columns=['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_geometry'])
     df_count.to_csv(os.path.join(path_output, "results_{}.csv".format(geographical_region)))
     # df_count.to_file(os.path.join(path_output, "results.shp"))
@@ -254,8 +261,9 @@ def concatenate_all_results_in_shapefile(prefix, scenario_count):
         gdf_data = gpd.GeoDataFrame(data)
         return gdf_data
 
-# set up
-entire_gdf_polygon = load_data("buildings_raw.shp", 1740508, 5420049, 1755776, 5443033) # full area
+
+# Load data
+entire_gdf_polygon = load_data("buildings_raw.shp")  # , 1740508, 5420049, 1755776, 5443033) # full area
 print("{} assets loaded".format(len(entire_gdf_polygon)))
 # entire_gdf_polygon = load_data("buildings_raw.shp", 1748000, 5424148, 1750000, 5427600)
 entire_gdf_polygon["area"] = entire_gdf_polygon['geometry'].area  # m2
@@ -266,38 +274,46 @@ entire_gdf['Y'] = entire_gdf.centroid.y
 entire_gdf['d_short'] = entire_gdf_polygon.exterior.distance(entire_gdf)
 entire_gdf['d_long'] = entire_gdf['area'] / entire_gdf['d_short']
 
-# create a list of the
-
-# print("{} assets loaded".format(len(gdf)))
-# fig, ax = plt.subplots(2, 2)
-# gdf.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
-# gdf_polygon.plot(column='area', cmap='hsv', ax=ax[0, 1], legend=True)
-# gdf.plot(column='TARGET_FID', cmap='hsv', ax=ax[1, 0], legend=True)
-# ax[0,0].title.set_text("area")
-# ax[0,1].title.set_text("area")
-# ax[1,0].title.set_text('FID')
-# plt.tight_layout()
-# plt.show()
-
-# create edges
-# G = create_network(edges)
-
 #################################
+
 clean_up_file("*csv")
-number_of_scenarios = 5
+clean_up_file("*png")
+number_of_scenarios = 101
 scenarios_list = []
 log_burned = []  # no removing duplicate
 list_suburb = list(entire_gdf_polygon.suburb_loc.drop_duplicates())
+
+# Turn interactive plotting off
+plt.ioff()
 # --- SCENARIOS
 t = datetime.datetime.now()
+
 for suburb in list_suburb:
-    gdf = entire_gdf[entire_gdf['suburb_loc'] == suburb]
-    print("{} assets subset loaded for the {} area".format(len(entire_gdf_polygon), suburb))
-    print(gdf.head())
+    # initiate dataset
+    gdf = entire_gdf[entire_gdf.suburb_loc == suburb]
     gdf_polygon = entire_gdf_polygon[entire_gdf_polygon['suburb_loc'] == suburb]
-    print(gdf_polygon.head())
+    print("{} (points) {} (polygons) assets subset loaded for the {} area".format(len(gdf), len(gdf_polygon), suburb))
     # create edge list and network based on suburb buildings
     edges = build_edge_list(gdf, 45, gdf_polygon)
+    G = create_network(edges)
+
+    # plot
+    fig, ax = plt.subplots(2, 2)
+    gdf.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
+    gdf_polygon.plot(column='area', cmap='hsv', ax=ax[0, 1], legend=True)
+    gdf.plot(column='TARGET_FID', cmap='hsv', ax=ax[1, 0], legend=True)
+    options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
+               'with_labels': False, 'font_weight': 'bold'}
+    nx.draw_kamada_kawai(G, **options, ax=ax[1, 1])
+    ax[0, 0].title.set_text("area")
+    ax[0, 1].title.set_text("area")
+    ax[1, 0].title.set_text('FID')
+    plt.tight_layout()
+    plt.savefig(os.path.join(path_output, "inputs_{}.png".format(suburb)))
+    # plt.show()
+    plt.close(fig)
+
+    # start scenarios
     for scenario in range(number_of_scenarios):
         t0 = datetime.datetime.now()
         burn_list = []
@@ -342,5 +358,3 @@ t3 = datetime.datetime.now()
 print("total time for all suburbs : {}".format(t3 - t))
 
 gdf_final_1KFFE = concatenate_all_results_in_shapefile('results*', number_of_scenarios)
-
-
