@@ -112,10 +112,10 @@ def build_edge_list(geodataframe, maximum_distance, polygon_file):
 
 def create_network(edge_list_dataframe):
     graph = nx.from_pandas_edgelist(edge_list_dataframe, edge_attr=True)
-    options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
-               'with_labels': False, 'font_weight': 'bold'}
-    nx.draw_kamada_kawai(graph, **options)
-    plt.show()
+    # options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
+    #            'with_labels': False, 'font_weight': 'bold'}
+    # nx.draw_kamada_kawai(graph, **options)
+    # plt.show()
     return graph
 
 
@@ -240,7 +240,7 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     return df_count, dataframe
 
 
-# set up
+# set up & load input data
 # gdf = load_data("buildings_raw_pts.shp", 1748570, 5426959, 1748841, 5427115)
 gdf_polygon = load_data("buildings_raw.shp", 1748000, 5424148, 1750000, 5427600)
 gdf_polygon["area"] = gdf_polygon['geometry'].area  # m2
@@ -254,23 +254,35 @@ gdf['d_long'] = gdf['area'] / gdf['d_short']
 # create edge list and network
 edges = build_edge_list(gdf, 45, gdf_polygon)
 
+# create edges
+G = create_network(edges)
+
+
+#################################
+# set number of scenarios
+number_of_scenarios = 10
+# display of the input data
 print("{} assets loaded".format(len(gdf)))
 fig, ax = plt.subplots(2, 2)
 # gdf.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
 gdf_polygon.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
 # gdf.plot(column='TARGET_FID', cmap='hsv', ax=ax[1, 0], legend=True)
+options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
+               'with_labels': False, 'font_weight': 'bold'}
+nx.draw_kamada_kawai(G, **options, ax=ax[1, 1])
 ax[0,0].title.set_text("area")
-# ax[0,1].title.set_text("area")
-# ax[1,0].title.set_text('FID')
+ax[0,1].title.set_text("area")
+ax[1,0].title.set_text('FID')
+ax[1,1].title.set_text('Network display')
 plt.tight_layout()
+plt.savefig(os.path.join(path_output, "inputs_{}.png".format(number_of_scenarios)))
 plt.show()
+plt.close(fig)
+################################
 
-# create edges
-G = create_network(edges)
 
-#################################
+# run model
 clean_up_file("*csv")
-number_of_scenarios = 10
 scenarios_list = []
 log_burned = []  # no removing duplicate
 # --- SCENARIOS
