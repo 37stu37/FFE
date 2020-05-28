@@ -7,40 +7,42 @@ Original file is located at
     https://colab.research.google.com/github/37stu37/FFE/blob/master/kernel44d2abc868.ipynb
 """
 
+import sys
+from pathlib import Path
+import multiprocessing as mp
+import memory_profiler as mem_profile
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import memory_profiler as mem_profile
-import sys
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # %% [code] {"id":"NQZTDiIo1CX_"}
 # import data
-folder = Path('../input/')
-edge_file = folder / 'ffe-data' / 'Copy of edge_data.parquet'
-wind_file = folder / 'ffe-data' /'Copy of GD_wind.csv'
+folder = Path('/Users/alex/Google Drive/04_Cloud/01_Work/GNS/008_FFE/runs')
+edge_file = folder / 'data' / 'Copy of edge_data.parquet'
+wind_file = folder / 'data' / 'Copy of GD_wind.csv'
 
-wind_data = pd.read_csv(wind_file) 
+wind_data = pd.read_csv(wind_file)
 edgelist = pd.read_parquet(edge_file, engine='pyarrow')
+
 
 # %% [code] {"id":"pLBvdq4kFYnH"}
 # %%timeit
 def wind_scenario(wind_data):
-      i = np.random.randint(0, wind_data.values.shape[0])
-      w = wind_data.values[i, 2]
-      dist = wind_data.values[i, 1]
-      b = wind_data.values[i, 3]
-      bear_max = b + 45  # wind direction
-      bear_min = b - 45
-      if b == 360:
-          bear_max = 45
-      if b <= 0:  # should not be necessary
-          bear_min = 0
-      if b == 999:
-          bear_max = 999
-          bear_min = 0
-      return bear_max, bear_min, dist # wind characteristics, bearing and distance
+    i = np.random.randint(0, wind_data.values.shape[0])
+    w = wind_data.values[i, 2]
+    dist = wind_data.values[i, 1]
+    b = wind_data.values[i, 3]
+    bear_max = b + 45  # wind direction
+    bear_min = b - 45
+    if b == 360:
+        bear_max = 45
+    if b <= 0:  # should not be necessary
+        bear_min = 0
+    if b == 999:
+        bear_max = 999
+        bear_min = 0
+    return bear_max, bear_min, dist  # wind characteristics, bearing and distance
 
 
 def ignition(edges=edgelist):
@@ -51,10 +53,11 @@ def ignition(edges=edgelist):
 
 
 def mask(t, activeEdges_d, listActivatedSources_d, w_b_max, w_b_min, w_d):
-    if t==0: # special case at time=0
+    if t == 0:  # special case at time=0
         return activeEdges_d
     else:
-        mask = (activeEdges_d.bearing.values < w_b_max) & (activeEdges_d.bearing.values < w_b_min) & (activeEdges_d.distance < w_d)
+        mask = (activeEdges_d.bearing.values < w_b_max) & (activeEdges_d.bearing.values < w_b_min) & (
+                    activeEdges_d.distance < w_d)
         NewActiveEdges = activeEdges_d[mask]
         NewActiveEdges = NewActiveEdges[~NewActiveEdges.source.isin(listActivatedSources_d)]
         return NewActiveEdges
@@ -64,21 +67,14 @@ def propagation(activeEdges_d, edges=edgelist):
     NewActiveEdges = edges[edges.source.isin(activeEdges_d.target)]
     return NewActiveEdges
 
-# %% [markdown] {"id":"g9Vq0cczZSy4"}
-# **Main**
-# 
-# 
-# ---
 
-# %% [code] {"id":"Q7pHNrjZN8Zw"}
-def main(n):
+def runs(n):
     listScenarioDataframes = []
     for scenario in range(n):
         # initial setup
         condition = True
-        # listScenarioDataframes = []
         listActivatedSources = []
-        time = 0 
+        time = 0
         # wind conditions
         w_bearing_max, w_bearing_min, w_distance = wind_scenario(wind_data)
         # ignition / initial state and edges selection
@@ -93,7 +89,7 @@ def main(n):
             listActivatedSources.extend(ActiveEdges.source.values)
             ActiveEdges = propagation(ActiveEdges)
             mem = mem_profile.memory_usage()
-            memList =  sys.getsizeof(listScenarioDataframes)
+            memList = sys.getsizeof(listScenarioDataframes)
             time += 1
         if mem[0] > 3000:
             Activations = pd.concat(listScenarioDataframes)
@@ -103,6 +99,12 @@ def main(n):
         Activations = pd.concat(listScenarioDataframes)
         Activations.to_parquet('scenario{}_time{}_Activations.parquet'.format(scenario, time), engine='pyarrow')
 
-# %% [code] {"id":"9LfdJ6G4iXzM"}
-# %%time
-main(3000)
+
+if __name__ == '__main__':
+    # what are your inputs, and what operation do you want to
+    # perform on each input. For example...
+    inputs = range(11)
+    #  removing processes argument makes the code run on all available cores
+    pool = mp.Pool(processes=4)
+    results = pool.map(runs, inputs)
+    print(results)
