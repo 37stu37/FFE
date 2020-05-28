@@ -82,11 +82,10 @@ def clean_up(path):
 
 
 def ffe_runs(n):
-    listScenarioDataframes = []
     for scenario in range(n):
         # initial setup
         condition = True
-        # listScenarioDataframes = []
+        listScenarioDataframes = []
         listActivatedSources = []
         time = 0
         # wind conditions
