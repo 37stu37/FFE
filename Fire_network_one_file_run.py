@@ -233,16 +233,19 @@ def postprocessing(scenarios_recorded, burned_asset, edge_list, gdf_polygons):
     fig, ax = plt.subplots(1, 1)
     df_count.plot(column='count', cmap='RdYlBu_r', ax=ax, legend=True)
     ax.title.set_text("Burned buildings after {} scenarios".format(max(scenarios_recorded)))
-    plt.show()
+    plt.savefig(os.path.join(path_output, "results_{}.png".format(number_of_scenarios)))
+    # plt.show()
+    plt.close(fig)
     df_count = df_count.drop(columns=['source', 'source_TARGET_FID', 'source_X', 'source_Y', 'source_geometry'])
-    df_count.to_csv(os.path.join(path_output, "results.csv"))
-    # df_count.to_file(os.path.join(path_output, "results.shp"))
+    df_count.to_csv(os.path.join(path_output, "results_{}.csv".format(scenarios_recorded)))
+    df_count.to_file(os.path.join(path_output, "results_{}.shp".format(scenarios_recorded)))
     return df_count, dataframe
 
-
+tl0 = datetime.datetime.now()
 # set up & load input data
 # gdf = load_data("buildings_raw_pts.shp", 1748570, 5426959, 1748841, 5427115)
-gdf_polygon = load_data("buildings_raw.shp", 1748000, 5424148, 1750000, 5427600)
+# gdf_polygon = load_data("buildings_raw.shp", 1748412, 5426564, 1749086, 5427606) # smaller
+gdf_polygon = load_data("buildings_raw.shp", 1747550, 5426440, 1748813, 5428346) # comparison
 gdf_polygon["area"] = gdf_polygon['geometry'].area  # m2
 gdf = gdf_polygon.copy()
 gdf['geometry'] = gdf['geometry'].centroid
@@ -257,32 +260,36 @@ edges = build_edge_list(gdf, 45, gdf_polygon)
 # create edges
 G = create_network(edges)
 
+tl1 = datetime.datetime.now()
+print("creating edge list took : {}".format(tl1 - tl0))
+
 
 #################################
 # set number of scenarios
-number_of_scenarios = 10
+number_of_scenarios = 1001
 # display of the input data
-print("{} assets loaded".format(len(gdf)))
-fig, ax = plt.subplots(2, 2)
-# gdf.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
-gdf_polygon.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
-# gdf.plot(column='TARGET_FID', cmap='hsv', ax=ax[1, 0], legend=True)
-options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
-               'with_labels': False, 'font_weight': 'bold'}
-nx.draw_kamada_kawai(G, **options, ax=ax[1, 1])
-ax[0,0].title.set_text("area")
-ax[0,1].title.set_text("area")
-ax[1,0].title.set_text('FID')
-ax[1,1].title.set_text('Network display')
-plt.tight_layout()
-plt.savefig(os.path.join(path_output, "inputs_{}.png".format(number_of_scenarios)))
-plt.show()
-plt.close(fig)
+# print("{} assets loaded".format(len(gdf)))
+# fig, ax = plt.subplots(1, 1)
+# # gdf.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
+# gdf_polygon.plot(column='area', cmap='hsv', ax=ax[0, 0], legend=True)
+# # gdf.plot(column='TARGET_FID', cmap='hsv', ax=ax[1, 0], legend=True)
+# options = {'node_color': 'red', 'node_size': 50, 'width': 1, 'alpha': 0.4,
+#                'with_labels': False, 'font_weight': 'bold'}
+# nx.draw_kamada_kawai(G, **options, ax=ax[1, 1])
+# ax[0,0].title.set_text("area")
+# # ax[0,1].title.set_text("area")
+# # ax[1,0].title.set_text('FID')
+# ax[1,0].title.set_text('Network display')
+# plt.tight_layout()
+# plt.savefig(os.path.join(path_output, "inputs_{}.png".format(number_of_scenarios)))
+# # plt.show()
+# plt.close(fig)
 ################################
 
 
 # run model
 clean_up_file("*csv")
+clean_up_file("*png")
 scenarios_list = []
 log_burned = []  # no removing duplicate
 # --- SCENARIOS
