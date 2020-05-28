@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
-import memory_profiler as mem_profile
 import sys
 import os
 import glob
@@ -83,11 +82,10 @@ def clean_up(path):
 
 
 def ffe_runs(n):
-    listScenarioDataframes = []
     for scenario in range(n):
         # initial setup
         condition = True
-        # listScenarioDataframes = []
+        listScenarioDataframes = []
         listActivatedSources = []
         time = 0
         # wind conditions
@@ -109,12 +107,12 @@ def ffe_runs(n):
         Activations = pd.concat(listScenarioDataframes)
         Activations["scenario"] = scenario
         Activations["pid"] = os.getpid()
-        Activations.to_parquet('/Volumes/NO NAME/output/scenario{}_pid{}_Activations.parquet'.format(scenario, os.getpid()),
+        Activations.to_parquet('G:/ffe-runs/scenario{}_pid{}_Activations.parquet'.format(scenario, os.getpid()),
                                engine='pyarrow')
 
 
 # run in parallel using the available cores
-n_scenario = [1000] * mp.cpu_count()
+n_scenario = range(10)
 pool = mp.Pool()
 results = pool.map(ffe_runs, n_scenario)
 
