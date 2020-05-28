@@ -112,7 +112,7 @@ def ffe_runs(n):
 
 
 # run in parallel using the available cores
-n_scenario = range(10)
+n_scenario = [1250] * mp.cpu_count()
 pool = mp.Pool()
 results = pool.map(ffe_runs, n_scenario)
 
