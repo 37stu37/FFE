@@ -16,11 +16,12 @@ pd.options.mode.chained_assignment = None  # default='warn'
 """
 
 # import data from zip file
-folder = Path('/Users/alex/Desktop/runs')
-with ZipFile(folder / 'ffe_data.zip', 'r') as zip:
-    edge_file = zip.extract('Copy of edge_data.parquet')
-    wind_file = zip.extract('Copy of GD_wind.csv')
-
+# folder = Path('/Users/alex/Desktop/runs')
+# with ZipFile(folder / 'ffe_data.zip', 'r') as zip:
+#     edge_file = zip.extract('Copy of edge_data.parquet')
+#     wind_file = zip.extract('Copy of GD_wind.csv')
+edge_file = "Copy of edge_data.parquet"
+wind_file = "Copy of GD_wind.csv"
 # load data
 wind_data = pd.read_csv(wind_file)
 edgelist = pd.read_parquet(edge_file, engine='pyarrow')
@@ -119,7 +120,7 @@ def ffe_runs(n):
                                engine='pyarrow')
 
 
-# if __name__ == '__main__':
+# run in parallel using the available cores
 n_scenario = range(10)
 pool = mp.Pool()
 results = pool.map(ffe_runs, n_scenario)
@@ -133,7 +134,7 @@ results = pool.map(ffe_runs, n_scenario)
 ---
 """
 
-clean_up('/Users/alex/Desktop/runs/output/*')
+clean_up('/Volumes/NO NAME/output/*')
 
 # pqt = pd.read_parquet("/content/drive/My Drive/04_Cloud/01_Work/GNS/008_FFE/runs/output/scenario0_pid1998_Activations.parquet")
 
