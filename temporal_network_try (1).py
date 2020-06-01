@@ -7,7 +7,7 @@ import multiprocessing as mp
 pd.options.mode.chained_assignment = None  # default='warn'
 
 """
-**Load data from zip file**
+**Load data from git**
 ---
 """
 
