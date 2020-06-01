@@ -1,11 +1,8 @@
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import os
 import glob
 import multiprocessing as mp
-from zipfile import ZipFile
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -107,7 +104,7 @@ def ffe_runs(n):
         Activations = pd.concat(listScenarioDataframes)
         Activations["scenario"] = scenario
         Activations["pid"] = os.getpid()
-        Activations.to_parquet('G:/ffe-runs/scenario{}_pid{}_Activations.parquet'.format(scenario, os.getpid()),
+        Activations.to_parquet('/Volumes/NO NAME/output/scenario{}_pid{}_Activations.parquet'.format(scenario, os.getpid()),
                                engine='pyarrow')
 
 
