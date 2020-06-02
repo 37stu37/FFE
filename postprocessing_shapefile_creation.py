@@ -43,7 +43,7 @@ def read_and_concatenate_parquets(prefix, path=path_output):
 
 def count_fid_occurences(df):
   count = df['source'].value_counts().compute()
-  count_df = count.to_frame()
+  count_df = pd.DataFrame({'source': count.index, 'count': count.values})
   return count_df
 
 def load_shapefile(file_name, minx, miny, maxx, maxy):
@@ -55,7 +55,7 @@ def load_shapefile(file_name, minx, miny, maxx, maxy):
     data_size = getsizeof(gdf_buildings) /(1024.0**3)
     print("Shapefile extent : {}".format(max_extent))
     print("Asset loaded : {}".format(len(gdf_buildings)))
-    gdf.plot(column='IgnProb_bl', cmap='hsv', legend=True)
+    gdf_buildings.plot(column='IgnProb_bl', cmap='hsv', legend=True)
     return gdf_buildings
 
 def merge_coordinates_export_shape(ddf, gdf, name_output):
