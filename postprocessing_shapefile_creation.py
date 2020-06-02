@@ -75,4 +75,11 @@ print(count_df.head(5))
 
 gdf = load_shapefile("buildings_raw.shp", 1740508, 5420049, 1755776, 5443033) # whole
 
-# gdf_count = merge_coordinates_export_shape(count_df, gdf, "burned_buildings")
+gdf_count = merge_coordinates_export_shape(count_df, gdf, "burned_buildings")
+
+# plot map with background tile
+import contextily as ctx
+gdf_count = gdf_count.to_crs(epsg=3857) # "web mercator"
+ax = gdf_count.plot(column='count', cmap='seismic', legend=True, alpha=0.3)
+ctx.add_basemap(ax) #, zoom=12)
+
