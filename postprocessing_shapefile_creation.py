@@ -84,7 +84,7 @@ def merge_coordinates_export_shape(ddf, gdf, name_output):
   return gdf_merge
 
 
-df = read_and_concatenate_parquets("output_scenario*")
+df = read_and_concatenate_parquets("scenario*")
 count_df = count_fid_occurences(df)
 
 gdf = load_shapefile("buildings_raw.shp", 1740508, 5420049, 1755776, 5443033) # whole
