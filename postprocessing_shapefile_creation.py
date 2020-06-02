@@ -14,32 +14,16 @@
 #
 # Commented out IPython magic to ensure Python compatibility.
 # %%time
-import datetime
 import glob
-import shutil
-from math import sqrt
 import os
-import matplotlib.pyplot as plt
-import bokeh
-import numpy as np
-import pandas as pd
-import geopandas as gpd
-from scipy.spatial import distance
-from shapely.geometry import box
-from shapely.geometry import shape
-from shapely.geometry import Point
-import networkx as nx
 from sys import getsizeof
-from numba import jit
+
 import dask.dataframe as dd
-import dask.array as da
-import dask
+import geopandas as gpd
+import pandas as pd
 from dask.distributed import Client
-from dask.diagnostics import ProgressBar
-# %matplotlib inline
-# %load_ext memory_profiler
-# 
-# pd.options.mode.chained_assignment = None  # default='warn'
+from shapely.geometry import box
+
 
 client = Client(processes=False)
 client
@@ -70,7 +54,7 @@ def load_shapefile(file_name, minx, miny, maxx, maxy):
     data_size = getsizeof(gdf_buildings) /(1024.0**3)
     print("Shapefile extent : {}".format(max_extent))
     print("Asset loaded : {}".format(len(gdf_buildings)))
-    # gdf.plot(column='IgnProb_bl', cmap='hsv', legend=True)
+    gdf.plot(column='IgnProb_bl', cmap='hsv', legend=True)
     return gdf_buildings
 
 def merge_coordinates_export_shape(ddf, gdf, name_output):
@@ -86,7 +70,8 @@ def merge_coordinates_export_shape(ddf, gdf, name_output):
 
 df = read_and_concatenate_parquets("scenario*")
 count_df = count_fid_occurences(df)
+print(count_df.head(5))
 
 gdf = load_shapefile("buildings_raw.shp", 1740508, 5420049, 1755776, 5443033) # whole
 
-gdf_count = merge_coordinates_export_shape(count_df, gdf, "burned_buildings")
+# gdf_count = merge_coordinates_export_shape(count_df, gdf, "burned_buildings")
