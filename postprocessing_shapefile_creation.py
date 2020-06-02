@@ -57,7 +57,7 @@ def read_and_concatenate_parquets(prefix, path=path_output):
   return df
 
 def count_fid_occurences(df):
-  count = df['source'].value_counts.compute()
+  count = df['source'].value_counts().compute()
   count_df = count.to_frame()
   return count_df
 
