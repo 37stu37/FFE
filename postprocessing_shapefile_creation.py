@@ -35,6 +35,7 @@ def read_and_concatenate_parquets(prefix, path=path_output):
   L = []
   files = glob.glob(os.path.join(path_output, 'output', prefix))# output_scenario_0_step_0.parquet
   for file in files:
+    print("file loaded : {}".format(file))
     pqt = dd.read_parquet(file)
     L.append(pqt)
   df = dd.concat(L)
