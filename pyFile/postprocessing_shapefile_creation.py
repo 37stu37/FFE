@@ -50,7 +50,7 @@ def load_shapefile(file_name, minx, miny, maxx, maxy):
     # crop data
     bbox = box(minx, miny, maxx, maxy)
     # building point dataset
-    gdf_buildings = gpd.read_file(os.path.join('../shapefile', file_name), bbox=bbox)
+    gdf_buildings = gpd.read_file(os.path.join('../data/shapefile', file_name), bbox=bbox)
     max_extent = gdf_buildings.total_bounds
     data_size = getsizeof(gdf_buildings) /(1024.0**3)
     print("Shapefile extent : {}".format(max_extent))
