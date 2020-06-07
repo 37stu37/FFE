@@ -50,7 +50,7 @@ def load_shapefile(file_name, minx, miny, maxx, maxy):
     # crop data
     bbox = box(minx, miny, maxx, maxy)
     # building point dataset
-    gdf_buildings = gpd.read_file(os.path.join('shapefile',file_name), bbox=bbox)
+    gdf_buildings = gpd.read_file(os.path.join('../shapefile', file_name), bbox=bbox)
     max_extent = gdf_buildings.total_bounds
     data_size = getsizeof(gdf_buildings) /(1024.0**3)
     print("Shapefile extent : {}".format(max_extent))
@@ -70,16 +70,16 @@ def merge_coordinates_export_shape(ddf, gdf, name_output):
 
 
 df = read_and_concatenate_parquets("scenario*")
-count_df = count_fid_occurences(df)
-print(count_df.head(5))
-
-gdf = load_shapefile("buildings_raw.shp", 1740508, 5420049, 1755776, 5443033) # whole
-
-gdf_count = merge_coordinates_export_shape(count_df, gdf, "burned_buildings")
-
-# plot map with background tile
-import contextily as ctx
-gdf_count = gdf_count.to_crs(epsg=3857) # "web mercator"
-ax = gdf_count.plot(column='count', cmap='seismic', legend=True, alpha=0.3)
-ctx.add_basemap(ax) #, zoom=12)
+# count_df = count_fid_occurences(df)
+# print(count_df.head(5))
+#
+# gdf = load_shapefile("buildings_raw.shp", 1740508, 5420049, 1755776, 5443033) # whole
+#
+# gdf_count = merge_coordinates_export_shape(count_df, gdf, "burned_buildings")
+#
+# # plot map with background tile
+# import contextily as ctx
+# gdf_count = gdf_count.to_crs(epsg=3857) # "web mercator"
+# ax = gdf_count.plot(column='count', cmap='seismic', legend=True, alpha=0.3)
+# ctx.add_basemap(ax) #, zoom=12)
 

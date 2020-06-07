@@ -12,8 +12,8 @@ pd.options.mode.chained_assignment = None  # default='warn'
 """
 
 # load data
-wind_data = pd.read_csv("Copy of GD_wind.csv")
-edgelist = pd.read_parquet("Copy of edge_data.parquet", engine='pyarrow')
+wind_data = pd.read_csv("../data/Copy of GD_wind.csv")
+edgelist = pd.read_parquet("../data/Copy of edge_data.parquet", engine='pyarrow')
 
 """
 **Definitions**
