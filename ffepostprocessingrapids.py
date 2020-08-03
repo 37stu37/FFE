@@ -40,10 +40,9 @@ def read_and_concatenate_parquets(nscenarios, nparallel, path=pathParquets):
     for pidName in pidNames:
       print(f" file pid {pidName}")
       pidList.append(pidName)
-
     pidList = list(set(pidList))
-    updtScenariolist = np.arange(0,nscenarios*nparallel, nscenarios)
-    updtScenariolist = np.cumsum(updtScenariolist)
+    updtScenariolist = np.repeat(nscenarios, nparallel)
+    updtScenariolist = list(np.cumsum(updtScenariolist))
 
   for file in files:
     pqt = pd.read_parquet(file, engine='auto')
