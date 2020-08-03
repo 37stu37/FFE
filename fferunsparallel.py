@@ -16,12 +16,8 @@ Original file is located at
 
 import numpy as np
 import pandas as pd
-from pathlib import Path
-import sys
 import os
 import glob
-import time
-# import multiprocessing as mp
 
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -32,24 +28,14 @@ edge_file = 'FinnShapeEdges.parquet'
 wind_file = 'Copy of GD_wind.csv'
 folder = 'output'
 
-"""**Load files and update edgelist for proper ignition probabilities**
----
-"""
-
 # load data
 wind_data = pd.read_csv(wind_file) 
 edgelist = pd.read_parquet(edge_file, engine='auto')
 
-"""***probability of Ignition must be divided by the number of time the "source" is present in the edge list !!!!***"""
-
 rngFile = edgelist[['source', 'IgnProbBld']]
 rngFile.drop_duplicates(inplace=True)
 
-"""**Definitions**
----
-"""
-
-# %%timeit
+# definitions
 def wind_scenario(wind_data):
       i = np.random.randint(0, wind_data.values.shape[0])
       w = wind_data.values[i, 2]
@@ -127,11 +113,5 @@ def ffe_runs(n):
         Activations["pid"] = os.getpid()
         Activations.to_parquet(str(folder) + '/' + f'scenario{scenario}_pid{os.getpid()}.parquet', engine='auto', compression="GZIP")
 
-"""**Main**
----
-
-
----
-"""
-
+# Main
 ffe_runs(100)
