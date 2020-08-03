@@ -112,6 +112,7 @@ def ffe_runs(n):
             continue
         while condition: # spread burn zone
             ActiveEdges = mask(time, ActiveEdges, listActivatedSources, w_bearing_max, w_bearing_min, w_distance)
+            ActiveEdges['time'] = time
             if ActiveEdges.empty: #no more buildings to burn
                 break
             listScenarioDataframes.append(ActiveEdges)
