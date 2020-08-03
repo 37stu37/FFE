@@ -32,6 +32,7 @@ folder = 'output'
 wind_data = pd.read_csv(wind_file) 
 edgelist = pd.read_parquet(edge_file, engine='auto')
 
+## variable created to sample probabilities properly
 rngFile = edgelist[['source', 'IgnProbBld']]
 rngFile.drop_duplicates(inplace=True)
 
