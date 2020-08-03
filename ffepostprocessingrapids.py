@@ -55,7 +55,7 @@ def merge_parallel_update_scenario_count(ddf, pids):
     conditions.append((ddf.pid == p))
     results.append(ddf['scenario'] + sco)
 
-  ddf["scenarioUpdt"] = np.select(conditions, results, )
+  ddf["scenarioUpdt"] = np.select(conditions, results)
 
   return ddf
 
