@@ -20,8 +20,9 @@ import dask.dataframe as dd
 pd.options.mode.chained_assignment = None
 
 # Paths
-pathShapefile = Path('/content/drive/My Drive/Colab Notebooks/01_Repository/FFE/data/shapefile')
-pathParquets = Path('/content/drive/My Drive/Colab Notebooks/02_Output/ffeFinnComparison')
+path = Path.cwd()
+pathShapefile = path / 'shapefile'
+pathParquets = path / 'output'
 
 print(len(os.listdir(pathParquets)))
 
