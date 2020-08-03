@@ -16,6 +16,7 @@ import re
 from datetime import date
 
 import pandas as pd
+import numpy as np
 import geopandas as gpd
 import dask.dataframe as dd
 pd.options.mode.chained_assignment = None
@@ -47,11 +48,15 @@ def read_and_concatenate_parquets(path=pathParquets):
 
 
 def merge_parallel_update_scenario_count(ddf, pids):
+  conditions = []
+  results = []
   sco = 0
-  ddf["scenarioUpdt"] = ddf["scenario"]
   for p in pids:
-    ddf["scenarioUpdt"]  = np.where(ddf["pid"].values==p, ddf["scenarioUpdt"].values, (ddf["scenario"].values+sco))
-    sco += max(ddf["scenario"]).values
+    conditions.append((ddf.pid == p))
+    results.append(ddf['scenario'] + sco)
+
+  ddf["scenarioUpdt"] = np.select(conditions, results, )
+
   return ddf
 
 
