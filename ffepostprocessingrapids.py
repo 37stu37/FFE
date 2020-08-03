@@ -67,9 +67,7 @@ countShape = createShapefile(mergedDf)
 
 # Plot
 import matplotlib.pyplot as plt
-import seaborn as sns
 import contextily as ctx
-# %matplotlib inline
 plt.style.use('seaborn-whitegrid')
 
 FinnMeshblockShape = gpd.read_file(pathShapefile / 'Finn_MeshBlockSummary.shp')
