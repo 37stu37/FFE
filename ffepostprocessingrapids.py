@@ -29,19 +29,30 @@ pathParquets = path / 'output'
 print(len(os.listdir(pathParquets)))
 
 # definitions
-def read_and_concatenate_parquets(path=pathParquets):
+def read_and_concatenate_parquets(nscenarios, nparallel, path=pathParquets):
   L = []
   pidList = []
+  updtScenariolist = []
   files = pathParquets.glob('*.parquet')
   for file in files:
     regex = r"pid\d*"
-    matches = re.findall(regex, str(file))
-    for match in matches:
-      print(f" file pid {match}")
+    pidNames = re.findall(regex, str(file))
+    for pidName in pidNames:
+      print(f" file pid {pidName}")
+      pidList.append(pidName)
+
+    pidList = list(set(pidList))
+    updtScenariolist = np.arange(0,nscenarios*nparallel, nscenarios)
+    updtScenariolist = np.cumsum(updtScenariolist)
+
+  for file in files:
     pqt = pd.read_parquet(file, engine='auto')
-    pqt["pid"] = match
-    pidList.append(match)
-    # pqt.drop_duplicates(subset ="source", inplace = True)
+    regex = r"pid\d*"
+    pidNames = re.findall(regex, str(file))
+    pqt["pid"] = pidName
+    for idx, value in enumerate(pidList):
+      if pqt.pid == value:
+        pqt["scenarioUpdt"] = pqt["scenario"] + updtScenariolist[idx]
     L.append(pqt)
   df = dd.concat(L)
   return df, pidList
@@ -54,9 +65,7 @@ def merge_parallel_update_scenario_count(ddf, pids):
   for p in pids:
     conditions.append((ddf.pid == p))
     results.append(ddf['scenario'] + sco)
-
   ddf["scenarioUpdt"] = np.select(conditions, results)
-
   return ddf
 
 
