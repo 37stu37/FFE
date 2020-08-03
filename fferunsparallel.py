@@ -42,14 +42,8 @@ edgelist = pd.read_parquet(edge_file, engine='auto')
 
 """***probability of Ignition must be divided by the number of time the "source" is present in the edge list !!!!***"""
 
-FreqCorrection = edgelist[["source"]]
-FreqCorrection['freq'] = edgelist.groupby('source')['source'].transform('count')
-FreqCorrection.drop_duplicates(inplace=True)
-
-edgelist = edgelist.merge(FreqCorrection, on=['source'], how='left')
-edgelist['IgnProbBld'] = edgelist['IgnProbBld'] / edgelist['freq']
-# corrected edgelist with proper Ignition probability
-edgelist.drop("freq", axis=1, inplace=True)
+rngFile = edgelist[['source', 'IgnProbBld']]
+rngFile.drop_duplicates(inplace=True)
 
 """**Definitions**
 ---
@@ -73,10 +67,10 @@ def wind_scenario(wind_data):
       return bear_max, bear_min, dist # wind characteristics, bearing and distance
 
 
-def ignition(edges=edgelist):
-    rng = np.random.uniform(0, 1, size=edges.values.shape[0])
-    mask = rng < edges.IgnProbBld.values
-    NewActiveEdges = edges[mask]
+def ignition(rngList=rngFile, edges=edgelist):
+    rngList['rng'] = np.random.uniform(0, 1, size=rngList.values.shape[0])
+    rngList = rngList[rngList['rng'] < rngList['IgnProbBld']]
+    NewActiveEdges = edges[edges['source'].isin(rngList['source'])]
     return NewActiveEdges
 
 
