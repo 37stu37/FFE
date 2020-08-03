@@ -12,6 +12,7 @@ Original file is located at
 
 from pathlib import Path
 import os
+import re
 from datetime import date
 
 import pandas as pd
@@ -26,18 +27,31 @@ pathParquets = path / 'output'
 
 print(len(os.listdir(pathParquets)))
 
+# definitions
 def read_and_concatenate_parquets(path=pathParquets):
   L = []
+  pidList = []
   files = pathParquets.glob('*.parquet')
-  number = 0
   for file in files:
-    number += 1
-    print(f"file loaded : {number}/{len(os.listdir(pathParquets))}")
+    regex = r"pid\d*"
+    matches = re.findall(regex, file)
+    for match in matches:
+      print(f" file pid {match}")
     pqt = pd.read_parquet(file, engine='auto')
-    pqt.drop_duplicates(subset ="source", inplace = True)
+    pqt["pid"] = match
+    pidList.append(match)
+    # pqt.drop_duplicates(subset ="source", inplace = True)
     L.append(pqt)
   df = dd.concat(L)
-  return df
+  return df, pidList
+
+def merge_parallel_update_scenario_count(ddf, pids):
+  sco = 0
+  for p in pids:
+    sco += max(ddf["scenario"])
+    if ddf["pid"] == p:
+      ddf["scenario_corrected"] = ddf["scenario"] + sco
+  return ddf
 
 def count_fid_occurences(df):
   count = df['source'].value_counts().compute()
