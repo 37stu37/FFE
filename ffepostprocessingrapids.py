@@ -34,7 +34,7 @@ def read_and_concatenate_parquets(path=pathParquets):
   files = pathParquets.glob('*.parquet')
   for file in files:
     regex = r"pid\d*"
-    matches = re.findall(regex, file)
+    matches = re.findall(regex, str(file))
     for match in matches:
       print(f" file pid {match}")
     pqt = pd.read_parquet(file, engine='auto')
@@ -45,19 +45,22 @@ def read_and_concatenate_parquets(path=pathParquets):
   df = dd.concat(L)
   return df, pidList
 
+
 def merge_parallel_update_scenario_count(ddf, pids):
   sco = 0
+  ddf["scenarioUpdt"] = ddf["scenario"]
   for p in pids:
-    sco += max(ddf["scenario"])
-    if ddf["pid"] == p:
-      ddf["scenario_corrected"] = ddf["scenario"] + sco
+    ddf["scenarioUpdt"]  = np.where(ddf["pid"].values==p, ddf["scenarioUpdt"].values, (ddf["scenario"].values+sco))
+    sco += max(ddf["scenario"]).values
   return ddf
+
 
 def count_fid_occurences(df):
   count = df['source'].value_counts().compute()
   count_df = pd.DataFrame({'source': count.index, 'count': count.values})
   count_df.to_parquet(str(pathShapefile) + '/' + f'CountBurn-{str(date.today())}.parquet', engine='auto', compression="GZIP")# could be datetime.now
   return count_df
+
 
 def Merge(countDf,nameShapefile):
   # Shapefile
@@ -69,16 +72,18 @@ def Merge(countDf,nameShapefile):
   merged = countDf.merge(gdfShape, on=['source'], how='left')
   return merged
 
+
 def createShapefile(df):
   gdf = gpd.GeoDataFrame(df, geometry='geometry')
   gdf.to_file(os.path.join(str(pathShapefile) + "/" + "Burn3000scenarioWellington.shp"))
   return gdf
 
+
 # Main
 concatDf = read_and_concatenate_parquets()
-countConcatDf = count_fid_occurences(concatDf)
-mergedDf = Merge(countConcatDf, 'WellWHV_Buildings.shp')
-countShape = createShapefile(mergedDf)
+# countConcatDf = count_fid_occurences(concatDf)
+# mergedDf = Merge(countConcatDf, 'WellWHV_Buildings.shp')
+# countShape = createShapefile(mergedDf)
 
 # Plot
 import matplotlib.pyplot as plt
