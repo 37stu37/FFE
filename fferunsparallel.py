@@ -22,7 +22,7 @@ import glob
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-os.chdir('/scratch/alexd/FFE')
+os.chdir('Z:\FFE')
 
 edge_file = 'FinnShapeEdges.parquet'
 wind_file = 'Copy of GD_wind.csv'
@@ -59,10 +59,10 @@ def wind_scenario(wind_data):
       return bear_max, bear_min, dist # wind characteristics, bearing and distance
 
 
-def ignition(rngList=rngFile, edges=edgelist):
-    rngList['rng'] = np.random.uniform(0, 1, size=rngList.values.shape[0])
-    rngList = rngList[rngList['rng'] < rngList['IgnProbBld']]
-    NewActiveEdges = edges[edges['source'].isin(rngList['source'])]
+def ignition(edges=edgelist):
+    rng = np.random.uniform(0, 1, size=edges.values.shape[0])
+    mask = rng < edges.IgnProbBld.values
+    NewActiveEdges = edges[mask]
     return NewActiveEdges
 
 
