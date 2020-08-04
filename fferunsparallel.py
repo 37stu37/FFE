@@ -33,8 +33,13 @@ wind_data = pd.read_csv(wind_file)
 edgelist = pd.read_parquet(edge_file, engine='auto')
 
 ## variable created to sample probabilities properly
-rngFile = edgelist[['source', 'IgnProbBld']]
-rngFile.drop_duplicates(inplace=True)
+FreqCorrection = edgelist[["source"]]
+FreqCorrection['freq'] = edgelist.groupby('source')['source'].transform('count')
+FreqCorrection.drop_duplicates(inplace=True)
+edgelist = edgelist.merge(FreqCorrection, on=['source'], how='left')
+edgelist['IgnProbBld'] = edgelist['IgnProbBld'] / edgelist['freq']
+# corrected edgelist with proper Ignition probability
+edgelist.drop("freq", axis=1, inplace=True)
 
 # definitions
 def wind_scenario(wind_data):
