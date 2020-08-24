@@ -54,4 +54,4 @@ def dask_sjoin(dd1, dd2):
 PGA_SA = dd.map_partitions(dask_sjoin, pga_dask, sa_dask)
 
 #%%
-# PGA_SA.to_parquet('/Users/alex/Dropbox/Work/GNS/008_FFE/ProbaFFE/PGA_SA.parquet')
+PGA_SA.to_parquet('/Users/alex/Dropbox/Work/GNS/008_FFE/ProbaFFE/PGA_SA.parquet')
