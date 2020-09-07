@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../InOutRepoData"
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
+}
