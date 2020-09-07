@@ -7,5 +7,7 @@
 			"path": "../../InOutRepoData/FFE"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
 }
